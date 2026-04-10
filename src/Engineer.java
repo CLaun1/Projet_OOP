@@ -14,13 +14,10 @@ public class Engineer extends User {
 	public boolean canAssignTask() {
 		return false;
 	}
-	public void updateTaskStatus(TaskManager manager, int taskId, TaskStatus newStatus)
-			throws TaskNotFoundException, DependencyNotCompletedException {
-		manager.updateTaskStatus(taskId, newStatus);
+	public String getSpecialty() {
+		return specialty;
 	}
-	public int estimateTaskDuration(int taskId) {
-		return 5;
+	public void setSpecialty(String specialty) {
+		this.specialty = specialty;
 	}
 }
-
-

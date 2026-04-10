@@ -14,21 +14,10 @@ public class Admin extends User{
 	public boolean canAssignTask() {
 		return true;
 	}
-	public void createUser(UserManager manager, User newUser) {
-		manager.addUser(this, newUser);
+	public int getAdminLevel() {
+		return adminLevel;
 	}
-	public void deleteUser(UserManager manager, String userId) {
-		manager.removeUser(this, userId);
-	}
-	public void changeUserRole(UserManager manager, String userId, User newUserObject) {
-		User oldUser = manager.getUserById(userId);
-		
-		if (oldUser == null) {
-			System.out.println("Utilisateur introuvable. ");
-			return;
-		}
-		manager.removeUser(this, userId);
-		
-		manager.addUser(this, newUserObject);
+	public void setAdminLevel(int adminLevel) {
+		this.adminLevel = adminLevel;
 	}
 }
