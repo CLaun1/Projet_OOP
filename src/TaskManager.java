@@ -1,16 +1,18 @@
 package src;
 
-import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
-import enumeration.PriorityLevel;
-import enumeration.TaskCategory;
-import enumeration.TaskStatus;
+public class TaskManager{
 
-public class TaskHistoryEntry extends Task{
 
-    public TaskHistoryEntry(int id, String title, String description, PriorityLevel priorityLevel, TaskStatus taskStatus, TaskCategory taskCategory, Date deadline, Engineer assignedEngineer) {
-        super(id, title, description, priorityLevel, taskStatus, taskCategory, deadline, assignedEngineer);
-    }
+    private Map<String, Task> tasks = new HashMap<>();
+    private PriorityQueue<Task> readyQueue = new PriorityQueue<>();
+    private Set<Task> inProgress = new HashSet<>();
 
+    
 
 }

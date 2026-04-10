@@ -1,4 +1,5 @@
 package src;
+
 public class Admin extends User{
 	private int adminLevel;
 	
@@ -15,13 +16,13 @@ public class Admin extends User{
 	public boolean canAssignTask() {
 		return true;
 	}
-	public void createUser(UserManager manager, User newUser) {
+	public void createUser(Manager manager, User newUser) {
 		manager.addUser(this, newUser);
 	}
-	public void deleteUser(UserManager manager, String userId) {
+	public void deleteUser(Manager manager, String userId) {
 		manager.removeUser(this, userId);
 	}
-	public void changeUserRole(UserManager manager, String userId, User newUserObject) {
+	public void changeUserRole(Manager manager, String userId, User newUserObject) {
 		User oldUser = manager.getUserById(userId);
 		
 		if (oldUser == null) {
