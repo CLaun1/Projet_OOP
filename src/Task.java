@@ -15,7 +15,7 @@ public class Task {
     private TaskCategory taskCategory;
     private Date deadline;
     private ArrayList<Task> dependencies = new ArrayList<>();
-    private ArrayList<TaskManager> history = new ArrayList<>();
+    private ArrayList<TaskHistoryEntry> history = new ArrayList<>();
     private Engineer assignedEngineer;
     
     public Task(int id, String title, String description, PriorityLevel priorityLevel, TaskStatus taskStatus, TaskCategory taskCategory, Date deadline) {
@@ -43,7 +43,7 @@ public class Task {
         taskStatus = newStatus;
     }
 
-    public void addHistoryEntry(TaskManager taskHistoryEntry){
+    public void addHistoryEntry(TaskHistoryEntry taskHistoryEntry){
         history.add(taskHistoryEntry);
     }
 
@@ -107,9 +107,4 @@ public class Task {
     public void setDeadline(Date deadline) {
         this.deadline = deadline;
     }
-
-    
-
-
-    
 }
