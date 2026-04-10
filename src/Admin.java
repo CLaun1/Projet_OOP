@@ -1,4 +1,3 @@
-package src;
 public class Admin extends User{
 	private int adminLevel;
 	
@@ -6,12 +5,15 @@ public class Admin extends User{
 		super(id, name, email);
 		this.adminLevel = adminLevel;
 	}
+	@Override
 	public boolean canCreateTask() {
 		return true;
 	}
+	@Override
 	public boolean canDeleteTask() {
 		return true;
 	}
+	@Override
 	public boolean canAssignTask() {
 		return true;
 	}

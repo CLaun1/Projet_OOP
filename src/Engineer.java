@@ -5,12 +5,15 @@ public class Engineer extends User {
 		super(id, name, email);
 		this.specialty = specialty;
 	}
+	@Override
 	public boolean canCreateTask() {
 		return false;
 	}
+	@Override
 	public boolean canDeleteTask() {
 		return false;
 	}
+	@Override
 	public boolean canAssignTask() {
 		return false;
 	}

@@ -5,12 +5,15 @@ public class Manager extends User {
 		super(id, name, email);
 		this.department = department;
 	}
+	@Override
 	public boolean canCreateTask() {
 		return true;
 	}
+	@Override
 	public boolean canDeleteTask() {
 		return false;
 	}
+	@Override
 	public boolean canAssignTask() {
 		return true;
 	}
