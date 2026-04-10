@@ -18,12 +18,29 @@ public class Task {
     private ArrayList<TaskHistoryEntry> history = new ArrayList<>();
     private Engineer assignedEngineer;
 
+    
+
+    public Task(int id, String title, String description, PriorityLevel priorityLevel, TaskStatus taskStatus, TaskCategory taskCategory, Date deadline, Engineer assignedEngineer) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.priorityLevel = priorityLevel;
+        this.taskStatus = taskStatus;
+        this.taskCategory = taskCategory;
+        this.deadline = deadline;
+        this.assignedEngineer = assignedEngineer;
+    }
+
     public void updateStatus(TaskStatus newStatus){
         taskStatus = newStatus;
     }
 
     public void addHistoryEntry(TaskHistoryEntry taskHistoryEntry){
         history.add(taskHistoryEntry);
+    }
+
+    public void addDependency(Task dependency){
+        dependencies.add(dependency);
     }
 
     public void displayTask(){
