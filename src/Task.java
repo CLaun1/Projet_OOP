@@ -17,8 +17,16 @@ public class Task {
     private ArrayList<Task> dependencies = new ArrayList<>();
     private ArrayList<TaskHistoryEntry> history = new ArrayList<>();
     private Engineer assignedEngineer;
-
     
+    public Task(int id, String title, String description, PriorityLevel priorityLevel, TaskStatus taskStatus, TaskCategory taskCategory, Date deadline) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.priorityLevel = priorityLevel;
+        this.taskStatus = taskStatus;
+        this.taskCategory = taskCategory;
+        this.deadline = deadline;
+    }
 
     public Task(int id, String title, String description, PriorityLevel priorityLevel, TaskStatus taskStatus, TaskCategory taskCategory, Date deadline, Engineer assignedEngineer) {
         this.id = id;
@@ -66,6 +74,14 @@ public class Task {
 
     public void updateDescription(String newDesc){
         description = newDesc;
+    }
+
+    public void assignEngineer(Engineer engineer){
+        assignedEngineer = engineer;
+    }
+
+    public Engineer getAssignedEngineer(){
+        return assignedEngineer;
     }
 
 
