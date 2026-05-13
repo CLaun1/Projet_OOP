@@ -1,0 +1,13 @@
+{
+  "java.project.sourcePaths": [
+    "src",
+    "enumeration",
+    "exceptions",
+    "tests",
+    "ui"
+  ],
+  "java.project.outputPath": "out",
+  "java.project.referencedLibraries": [
+    "lib/junit.jar"
+  ]
+}

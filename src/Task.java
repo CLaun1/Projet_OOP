@@ -7,11 +7,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Represents a single unit of work in the STRMS.
- * Encapsulates its own data, maintains dependency list and history.
- * Implements Comparable to allow priority-based ordering in PriorityQueue.
- */
 public class Task implements Comparable<Task> {
 
     private String id;              // Unique string ID (e.g., "T001")
