@@ -1,6 +1,4 @@
-import src.enumeration.*;
-import src.exceptions.*;
-import src.*;
+package src.controller;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -13,6 +11,15 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
 import javafx.stage.Stage;
+
+import src.Admin;
+import src.Engineer;
+import src.Manager;
+import src.Task;
+import src.TaskManager;
+import src.User;
+import src.enumeration.PriorityLevel;
+import src.enumeration.TaskStatus;
 
 import java.io.IOException;
 import java.util.ArrayList;
