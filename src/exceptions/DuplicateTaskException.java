@@ -1,4 +1,4 @@
-package exceptions;
+package src.exceptions;
 
 public class DuplicateTaskException extends Exception {
     public DuplicateTaskException(String taskId) {

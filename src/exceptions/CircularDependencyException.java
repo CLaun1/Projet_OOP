@@ -1,4 +1,4 @@
-package exceptions;
+package src.exceptions;
 
 public class CircularDependencyException extends Exception {
     public CircularDependencyException(String taskA, String taskB) {

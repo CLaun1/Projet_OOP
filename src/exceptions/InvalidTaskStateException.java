@@ -1,4 +1,4 @@
-package exceptions;
+package src.exceptions;
 
 public class InvalidTaskStateException extends Exception {
     public InvalidTaskStateException(String taskTitle, String fromState, String toState) {

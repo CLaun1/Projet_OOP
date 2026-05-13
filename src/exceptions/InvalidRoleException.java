@@ -1,4 +1,4 @@
-package exceptions;
+package src.exceptions;
 
 public class InvalidRoleException extends Exception {
     public InvalidRoleException(String userName, String action) {

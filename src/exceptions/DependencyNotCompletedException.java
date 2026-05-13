@@ -1,4 +1,4 @@
-package exceptions;
+package src.exceptions;
 
 public class DependencyNotCompletedException extends Exception {
     public DependencyNotCompletedException(String taskTitle, String dependencyTitle) {

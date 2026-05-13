@@ -1,8 +1,8 @@
 package ui;
 
 import src.*;
-import enumeration.*;
-import exceptions.*;
+import src.enumeration.*;
+import src.exceptions.*;
 
 import javax.swing.*;
 import javax.swing.border.*;

@@ -1,4 +1,4 @@
-package enumeration;
+package src.enumeration;
 
 public enum NotificationType {
     EMAIL, // Notifications sent via electronic mail.

@@ -1,24 +1,24 @@
 package src;
 
+import java.util.Objects;
+
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 public class Main extends Application {
-    @Override
-    public void start(Stage primaryStage) {
-        Button btn = new Button("Ça marche !");
-        StackPane root = new StackPane();
-        root.getChildren().add(btn);
-        Scene scene = new Scene(root, 300, 250);
-        primaryStage.setTitle("Test JavaFX");
-        primaryStage.setScene(scene);
+   @Override
+    public void start(Stage primaryStage) throws Exception {
+        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("view\\DashboardView.fxml")));
+        primaryStage.setTitle("Identification Etudiant");
+        primaryStage.setScene(new Scene(root));
         primaryStage.show();
     }
 
     public static void main(String[] args) {
         launch(args);
     }
+    
 }
