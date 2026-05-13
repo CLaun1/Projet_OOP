@@ -3,7 +3,10 @@ package src;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-
+/**
+ * Records a single auditable event in a task's lifecycle.
+ * Instances are immutable once created.
+ */
 public class TaskHistoryEntry {
 
     private final String action;          // Description of what happened

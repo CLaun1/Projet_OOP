@@ -1,12 +1,11 @@
 package src;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import enumeration.PriorityLevel;
 import enumeration.TaskCategory;
 import enumeration.TaskStatus;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Represents a single unit of work in the STRMS.

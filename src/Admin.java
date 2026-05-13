@@ -1,26 +1,30 @@
-public class Admin extends User{
-	private int adminLevel;
-	
-	public Admin (String id, String name, String email, int adminLevel) {
-		super(id, name, email);
-		this.adminLevel = adminLevel;
+package src;
+
+public class Admin extends User {
+    private int adminLevel;
+
+    public Admin(String id, String name, String email, int adminLevel) {
+        super(id, name, email);
+        this.adminLevel = adminLevel;
+    }
+
+    @Override 
+	public boolean canCreateTask() { 
+		return true; 
 	}
-	@Override
-	public boolean canCreateTask() {
-		return true;
+    @Override 
+	public boolean canDeleteTask() { 
+		return true; 
 	}
-	@Override
-	public boolean canDeleteTask() {
-		return true;
+    @Override 
+	public boolean canAssignTask() { 
+		return true; 
 	}
-	@Override
-	public boolean canAssignTask() {
-		return true;
+
+    public int getAdminLevel() { 
+		return adminLevel; 
 	}
-	public int getAdminLevel() {
-		return adminLevel;
-	}
-	public void setAdminLevel(int adminLevel) {
-		this.adminLevel = adminLevel;
+    public void setAdminLevel(int level)   { 
+		this.adminLevel = level; 
 	}
 }

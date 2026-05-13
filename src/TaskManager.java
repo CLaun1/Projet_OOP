@@ -8,6 +8,11 @@ import enumeration.TaskCategory;
 import enumeration.TaskStatus;
 import exceptions.*;
 
+/**
+ * Central controller of the STRMS.
+ * Enforces all business rules, manages task lifecycle,
+ * handles dependencies, permissions, and persistence.
+ */
 public class TaskManager {
 
     // ── Data Structures ──────────────────────────────────────────────────────
