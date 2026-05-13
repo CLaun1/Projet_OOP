@@ -1,18 +1,12 @@
 package src;
 
-import java.io.*;
-import java.util.*;
-
 import enumeration.PriorityLevel;
 import enumeration.TaskCategory;
 import enumeration.TaskStatus;
 import exceptions.*;
+import java.io.*;
+import java.util.*;
 
-/**
- * Central controller of the STRMS.
- * Enforces all business rules, manages task lifecycle,
- * handles dependencies, permissions, and persistence.
- */
 public class TaskManager {
 
     // ── Data Structures ──────────────────────────────────────────────────────
