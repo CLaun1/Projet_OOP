@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.ReportController"
+      spacing="16" style="-fx-padding: 20;">
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="Rapports" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Exporter (.txt)" onAction="#exportReport"
+                style="-fx-background-color: #3B6D11; -fx-text-fill: white;"/>
+    </HBox>
+
+    <!-- Sélecteur de type de rapport -->
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="Type de rapport :"/>
+        <ToggleGroup fx:id="reportTypeGroup"/>
+        <RadioButton text="Par statut"      toggleGroup="$reportTypeGroup" onAction="#generateReport"/>
+        <RadioButton text="Par utilisateur" toggleGroup="$reportTypeGroup" onAction="#generateReport"/>
+        <RadioButton text="Tâches en retard" toggleGroup="$reportTypeGroup" onAction="#generateReport"/>
+        <RadioButton text="Par priorité"    toggleGroup="$reportTypeGroup" onAction="#generateReport"/>
+    </HBox>
+
+    <!-- Zone d'affichage du rapport généré -->
+    <TextArea fx:id="reportArea" VBox.vgrow="ALWAYS"
+              editable="false" wrapText="true"
+              style="-fx-font-family: monospace; -fx-font-size: 13;"/>
+</VBox>
