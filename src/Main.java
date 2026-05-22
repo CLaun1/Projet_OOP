@@ -1,7 +1,5 @@
 package src;
 
-import java.util.Objects;
-
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -11,7 +9,7 @@ import javafx.stage.Stage;
 public class Main extends Application {
    @Override
     public void start(Stage primaryStage) throws Exception {
-        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("view/DashboardView.fxml")));
+        Parent root = FXMLLoader.load((getClass().getResource("view/DashboardView.fxml")));
         primaryStage.setTitle("Identification Etudiant");
         primaryStage.setScene(new Scene(root));
         primaryStage.show();

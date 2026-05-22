@@ -69,6 +69,7 @@ public class DashboardController {
      * Appelée manuellement depuis LoginController après injection,
      * car @FXML initialize() s'exécute avant setCurrentUser().
      */
+    
     public void initialize() {
         configureRoleAccess();
         configureTableColumns();
@@ -78,19 +79,25 @@ public class DashboardController {
     // ── Contrôle d'accès selon le rôle ────────────────────────────────────
 
     private void configureRoleAccess() {
-        // Ton TaskManager utilise Admin et Manager comme sous-classes de User
-        boolean isAdmin   = currentUser instanceof Admin;
-        boolean isManager = currentUser instanceof Manager;
+        if (this.currentUser != null) {
+            String name = this.currentUser.getName();
+            // Ton TaskManager utilise Admin et Manager comme sous-classes de User
+            boolean isAdmin   = currentUser instanceof Admin;
+            boolean isManager = currentUser instanceof Manager;
 
-        // Bouton "Utilisateurs" : Admin seulement
-        usersBtn.setVisible(isAdmin);
-        usersBtn.setManaged(isAdmin); // libère l'espace dans le VBox si masqué
+            // Bouton "Utilisateurs" : Admin seulement
+            usersBtn.setVisible(isAdmin);
+            usersBtn.setManaged(isAdmin); // libère l'espace dans le VBox si masqué
 
-        // Label bas de sidebar : nom + rôle
-        String role = isAdmin   ? "Admin"
-                    : isManager ? "Manager"
-                    : "Engineer";
-        currentUserLabel.setText(currentUser.getName() + " — " + role);
+            // Label bas de sidebar : nom + rôle
+            String role = isAdmin   ? "Admin"
+                        : isManager ? "Manager"
+                        : "Engineer";
+            currentUserLabel.setText(currentUser.getName() + " — " + role);
+        } else {
+            System.out.println("Avertissement : Aucun utilisateur connecté.");
+            currentUserLabel.setText("Mode Invité");
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
