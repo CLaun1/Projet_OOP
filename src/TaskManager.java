@@ -30,7 +30,16 @@ public class TaskManager {
     // ── User management ──────────────────────────────────────────────────────
 
     public void addUser(User user) {
-        users.put(user.getId(), user);
+        if (user != null) {
+            users.put(user.getId(), user);
+        }
+    }
+
+    public void addUser(User user, User requestedBy) throws InvalidRoleException {
+        if (!(requestedBy instanceof Admin)) {
+            throw new InvalidRoleException(requestedBy.getName(), "add a user");
+        }
+        addUser(user);
     }
 
     public User findUser(String userId) throws TaskNotFoundException {
@@ -41,14 +50,38 @@ public class TaskManager {
         return user;
     }
 
+    public void deleteUser(String id, User requestedBy) throws InvalidRoleException, TaskNotFoundException {
+        if (!(requestedBy instanceof Admin)) {
+            throw new InvalidRoleException(requestedBy.getName(), "delete a user");
+        }
+        
+        if (!users.containsKey(id)) {
+            throw new TaskNotFoundException("User ID: " + id);
+        }
+
+        // Nettoyage : Désassigner l'utilisateur des tâches en cours
+        for (Task t : tasks.values()) {
+            if (t.getAssignedUser() != null && t.getAssignedUser().getId().equals(id)) {
+                t.assignUser(null);
+                if (t.getTaskStatus() == TaskStatus.IN_PROGRESS) {
+                    t.updateStatus(TaskStatus.TODO);
+                    inProgressTasks.remove(t);
+                    taskQueue.offer(t);
+                }
+                t.addHistoryEntry(new TaskHistoryEntry("Unassigned automatically because the user was deleted.", requestedBy));
+            }
+        }
+
+        users.remove(id);
+        System.out.println("[TaskManager] User '" + id + "' deleted by " + requestedBy.getName());
+    }
+
     public HashMap<String, User> getUsers() { return users; }
 
     // ── Task CRUD ────────────────────────────────────────────────────────────
 
     /**
      * Adds a new task to the system.
-     * Verifies that the requesting user has create permission.
-     * Throws DuplicateTaskException if a task with the same ID already exists.
      */
     public void addTask(Task task, User requestedBy)
             throws InvalidRoleException, DuplicateTaskException {
@@ -65,6 +98,8 @@ public class TaskManager {
         // If no dependencies, directly queue the task
         if (task.allDependenciesDone()) {
             taskQueue.offer(task);
+        } else {
+            task.updateStatus(TaskStatus.BLOCKED);
         }
 
         task.addHistoryEntry(new TaskHistoryEntry(
@@ -75,7 +110,6 @@ public class TaskManager {
 
     /**
      * Deletes a task from the system.
-     * Only users with delete permission can do this.
      */
     public void deleteTask(String taskId, User requestedBy)
             throws InvalidRoleException, TaskNotFoundException {
@@ -93,16 +127,18 @@ public class TaskManager {
     }
 
     /**
-     * Assigns a task to an engineer.
-     * Only users with assign permission can do this.
-     * The task must not already be assigned.
+     * Assigns a task to an engineer or a manager.
      */
-    public void assignTask(String taskId, Engineer engineer, User requestedBy)
+    public void assignTask(String taskId, User engineerOrManager, User requestedBy)
             throws InvalidRoleException, TaskNotFoundException,
                    DependencyNotCompletedException, InvalidTaskStateException {
 
         if (!requestedBy.canAssignTask()) {
             throw new InvalidRoleException(requestedBy.getName(), "assign a task");
+        }
+
+        if (engineerOrManager instanceof Admin) {
+            throw new InvalidRoleException(engineerOrManager.getName(), "be assigned to a operational task (Admin restricted)");
         }
 
         Task task = findTask(taskId);
@@ -114,7 +150,6 @@ public class TaskManager {
         // Check dependencies before assigning
         for (Task dep : task.getDependencies()) {
             if (dep.getTaskStatus() != TaskStatus.DONE) {
-                // Log violation in history
                 task.addHistoryEntry(new TaskHistoryEntry(
                     "BLOCKED: Attempted assignment failed — dependency '"
                     + dep.getTitle() + "' is not completed.", requestedBy));
@@ -122,34 +157,33 @@ public class TaskManager {
             }
         }
 
-        task.assignEngineer(engineer);
+        task.assignUser(engineerOrManager);
         task.updateStatus(TaskStatus.IN_PROGRESS);
         inProgressTasks.add(task);
         taskQueue.remove(task); // No longer "waiting"
 
         task.addHistoryEntry(new TaskHistoryEntry(
-            "Assigned to engineer '" + engineer.getName() + "' by " + requestedBy.getName()
+            "Assigned to " + engineerOrManager.getRole() + " '" + engineerOrManager.getName() + "' by " + requestedBy.getName()
             + ". Status → IN_PROGRESS", requestedBy));
 
         System.out.println("[TaskManager] Task '" + task.getTitle()
-                + "' assigned to " + engineer.getName());
+                + "' assigned to " + engineerOrManager.getName());
     }
 
     /**
      * Marks a task as DONE.
-     * Only the assigned engineer can complete a task.
-     * After completion, checks if any blocked tasks can now be unblocked.
      */
     public void completeTask(String taskId, User requestedBy)
             throws TaskNotFoundException, InvalidRoleException, InvalidTaskStateException {
 
         Task task = findTask(taskId);
 
-        // Only the assigned engineer may complete
-        Engineer assigned = task.getAssignedEngineer();
-        if (assigned == null || !assigned.getId().equals(requestedBy.getId())) {
+        User assigned = task.getAssignedUser();
+        
+        // Authorization check: Only the assigned user or a Manager/Admin can close it
+        if (assigned == null || (!assigned.getId().equals(requestedBy.getId()) && !requestedBy.canUpdateTask())) {
             throw new InvalidRoleException(requestedBy.getName(),
-                "complete task '" + task.getTitle() + "' (not the assigned engineer)");
+                "complete task '" + task.getTitle() + "' (not the assigned operator)");
         }
 
         if (task.getTaskStatus() == TaskStatus.DONE) {
@@ -170,22 +204,18 @@ public class TaskManager {
 
     /**
      * Updates the status of a task (general-purpose).
-     * Enforces valid state transitions.
      */
     public void updateTask(String taskId, TaskStatus newStatus, User requestedBy)
             throws TaskNotFoundException, InvalidTaskStateException,
                    InvalidRoleException, DependencyNotCompletedException {
 
         Task task = findTask(taskId);
-
         TaskStatus current = task.getTaskStatus();
 
-        // DONE is a terminal state
         if (current == TaskStatus.DONE) {
             throw new InvalidTaskStateException(task.getTitle(), "DONE", newStatus.name());
         }
 
-        // Cannot move to IN_PROGRESS if dependencies are unfinished
         if (newStatus == TaskStatus.IN_PROGRESS) {
             for (Task dep : task.getDependencies()) {
                 if (dep.getTaskStatus() != TaskStatus.DONE) {
@@ -209,10 +239,6 @@ public class TaskManager {
 
     // ── Dependencies ─────────────────────────────────────────────────────────
 
-    /**
-     * Adds a dependency: taskId depends on dependsOnId.
-     * Validates: both tasks exist, no self-dependency, no circular dependency.
-     */
     public void addDependency(String taskId, String dependsOnId, User requestedBy)
             throws TaskNotFoundException, CircularDependencyException,
                    InvalidTaskStateException, InvalidRoleException {
@@ -220,17 +246,14 @@ public class TaskManager {
         Task task      = findTask(taskId);
         Task dependsOn = findTask(dependsOnId);
 
-        // A task cannot depend on itself
         if (taskId.equals(dependsOnId)) {
             throw new CircularDependencyException(taskId, dependsOnId);
         }
 
-        // A completed task should not gain new dependencies
         if (task.getTaskStatus() == TaskStatus.DONE) {
             throw new InvalidTaskStateException(task.getTitle(), "DONE", "adding dependency");
         }
 
-        // Check for circular dependency BEFORE modifying the graph
         if (detectCircularDependency(dependsOn, task)) {
             task.addHistoryEntry(new TaskHistoryEntry(
                 "REJECTED: Adding dependency on '" + dependsOn.getTitle()
@@ -240,9 +263,7 @@ public class TaskManager {
 
         task.addDependency(dependsOn);
 
-        // If the dependency is not done, block the task
-        if (dependsOn.getTaskStatus() != TaskStatus.DONE
-                && task.getTaskStatus() != TaskStatus.IN_PROGRESS) {
+        if (dependsOn.getTaskStatus() != TaskStatus.DONE && task.getTaskStatus() != TaskStatus.IN_PROGRESS) {
             task.updateStatus(TaskStatus.BLOCKED);
             taskQueue.remove(task);
         }
@@ -250,14 +271,8 @@ public class TaskManager {
         task.addHistoryEntry(new TaskHistoryEntry(
             "Dependency added: task now depends on '"
             + dependsOn.getTitle() + "'. Added by " + requestedBy.getName(), requestedBy));
-
-        System.out.println("[TaskManager] Dependency added: '" + task.getTitle()
-                + "' now depends on '" + dependsOn.getTitle() + "'");
     }
 
-    /**
-     * Removes a dependency between two tasks and re-evaluates blocked status.
-     */
     public void removeDependency(String taskId, String dependsOnId, User requestedBy)
             throws TaskNotFoundException {
 
@@ -266,7 +281,6 @@ public class TaskManager {
 
         task.removeDependency(dependsOn);
 
-        // Re-evaluate: if all remaining deps are done, unblock
         if (task.allDependenciesDone() && task.getTaskStatus() == TaskStatus.BLOCKED) {
             task.updateStatus(TaskStatus.TODO);
             taskQueue.offer(task);
@@ -275,19 +289,8 @@ public class TaskManager {
         task.addHistoryEntry(new TaskHistoryEntry(
             "Dependency on '" + dependsOn.getTitle() + "' removed by "
             + requestedBy.getName(), requestedBy));
-
-        System.out.println("[TaskManager] Dependency removed: '" + task.getTitle()
-                + "' no longer depends on '" + dependsOn.getTitle() + "'");
     }
 
-    /**
-     * Depth-First Search to detect if 'current' can reach 'target' through dependencies.
-     * If so, adding target → current would create a cycle.
-     *
-     * @param current The node we start from (the proposed new dependency)
-     * @param target  The node we are checking reachability to
-     * @return true if a cycle would be created
-     */
     public boolean detectCircularDependency(Task current, Task target) {
         if (current == target) return true;
         Set<String> visited = new HashSet<>();
@@ -359,20 +362,18 @@ public class TaskManager {
         System.out.println("║ DONE           : " + pad(done, 20) + "║");
         System.out.println("╠══════════════════════════════════════╣");
 
-        // Tasks per user
-        Map<String, Long> perEngineer = new HashMap<>();
+        Map<String, Long> perUser = new HashMap<>();
         for (Task t : tasks.values()) {
-            Engineer eng = t.getAssignedEngineer();
-            if (eng != null) {
-                perEngineer.merge(eng.getName(), 1L, Long::sum);
+            User u = t.getAssignedUser();
+            if (u != null) {
+                perUser.merge(u.getName() + " (" + u.getRole() + ")", 1L, Long::sum);
             }
         }
-        System.out.println("║ Tasks per engineer:                  ║");
-        for (Map.Entry<String, Long> e : perEngineer.entrySet()) {
+        System.out.println("║ Tasks per operator:                  ║");
+        for (Map.Entry<String, Long> e : perUser.entrySet()) {
             System.out.println("║   " + pad(e.getKey() + ": " + e.getValue(), 35) + "║");
         }
 
-        // Overdue tasks (deadline passed and not DONE)
         Date now = new Date();
         long overdue = tasks.values().stream()
             .filter(t -> t.getDeadline() != null
@@ -384,9 +385,7 @@ public class TaskManager {
     }
 
     private long count(TaskStatus status) {
-        return tasks.values().stream()
-                    .filter(t -> t.getTaskStatus() == status)
-                    .count();
+        return tasks.values().stream().filter(t -> t.getTaskStatus() == status).count();
     }
 
     private String pad(Object value, int width) {
@@ -396,23 +395,17 @@ public class TaskManager {
 
     // ── File Persistence ──────────────────────────────────────────────────────
 
-    /**
-     * Saves all tasks to a CSV file.
-     * Format: id,title,description,priority,status,category,deadline,assignedEngineerId
-     */
     public void saveTasksToFile(String filename) throws FilePersistenceException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            writer.write("id,title,description,priority,status,category,deadline,assignedEngineer");
+            writer.write("id,title,description,priority,status,category,deadline,assignedUser");
             writer.newLine();
             for (Task t : tasks.values()) {
-                String engineerId = t.getAssignedEngineer() != null
-                    ? t.getAssignedEngineer().getId() : "";
-                String deadline   = t.getDeadline() != null
-                    ? String.valueOf(t.getDeadline().getTime()) : "";
+                String userId = t.getAssignedUser() != null ? t.getAssignedUser().getId() : "";
+                String deadline = t.getDeadline() != null ? String.valueOf(t.getDeadline().getTime()) : "";
                 writer.write(String.join(",",
                     t.getId(), t.getTitle(), t.getDescription(),
                     t.getPriorityLevel().name(), t.getTaskStatus().name(),
-                    t.getTaskCategory().name(), deadline, engineerId));
+                    t.getTaskCategory().name(), deadline, userId));
                 writer.newLine();
             }
             System.out.println("[TaskManager] Tasks saved to '" + filename + "'");
@@ -421,10 +414,6 @@ public class TaskManager {
         }
     }
 
-    /**
-     * Loads tasks from a CSV file (created by saveTasksToFile).
-     * Engineers referenced must already be loaded in the users map.
-     */
     public void loadTasksFromFile(String filename) throws FilePersistenceException {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line = reader.readLine(); // skip header
@@ -432,8 +421,7 @@ public class TaskManager {
                 String[] parts = line.split(",", -1);
                 if (parts.length < 8) continue;
 
-                Date deadline = parts[6].isEmpty() ? null
-                    : new Date(Long.parseLong(parts[6]));
+                Date deadline = parts[6].isEmpty() ? null : new Date(Long.parseLong(parts[6]));
 
                 Task task = new Task(
                     parts[0], parts[1], parts[2],
@@ -445,24 +433,28 @@ public class TaskManager {
 
                 if (!parts[7].isEmpty()) {
                     User u = users.get(parts[7]);
-                    if (u instanceof Engineer) {
-                        task.assignEngineer((Engineer) u);
+                    if (u != null) {
+                        task.assignUser(u);
                     }
                 }
 
                 tasks.put(task.getId(), task);
+                
+                // Re-populate system memory queues
+                if (task.getTaskStatus() == TaskStatus.IN_PROGRESS) {
+                    inProgressTasks.add(task);
+                } else if (task.getTaskStatus() == TaskStatus.TODO) {
+                    taskQueue.offer(task);
+                }
             }
             System.out.println("[TaskManager] Tasks loaded from '" + filename + "'");
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             throw new FilePersistenceException(filename, e.getMessage());
         }
     }
 
     // ── Report generation ─────────────────────────────────────────────────────
 
-    /**
-     * Generates a text report of all tasks with their full history.
-     */
     public void generateReport(String filename) throws FilePersistenceException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
             writer.write("=== STRMS Task Report ===\n\n");
@@ -471,8 +463,8 @@ public class TaskManager {
                 writer.write("  Status   : " + t.getTaskStatus() + "\n");
                 writer.write("  Priority : " + t.getPriorityLevel() + "\n");
                 writer.write("  Category : " + t.getTaskCategory() + "\n");
-                writer.write("  Assigned : " + (t.getAssignedEngineer() != null
-                    ? t.getAssignedEngineer().getName() : "Unassigned") + "\n");
+                writer.write("  Assigned : " + (t.getAssignedUser() != null
+                    ? t.getAssignedUser().getName() + " (" + t.getAssignedUser().getRole() + ")" : "Unassigned") + "\n");
                 writer.write("  History  :\n");
                 for (TaskHistoryEntry entry : t.getHistory()) {
                     writer.write("    " + entry.toString() + "\n");
@@ -487,10 +479,6 @@ public class TaskManager {
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
-    /**
-     * After a task is completed, scan all tasks to unblock those
-     * whose dependencies are now all DONE.
-     */
     private void activateDependentTasks(Task completedTask) {
         for (Task t : tasks.values()) {
             if (t.getTaskStatus() == TaskStatus.BLOCKED && t.allDependenciesDone()) {

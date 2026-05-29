@@ -5,10 +5,10 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.stage.Stage;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import javafx.geometry.Pos;
 import javafx.beans.property.SimpleStringProperty;
 
 import src.Admin;
@@ -54,7 +54,7 @@ public class TaskDetailController {
     private TaskManager         taskManager;
     private User                currentUser;
     private Map<String, String> passwords;
-    private Task                task; // tâche actuellement affichée
+    private Task                task;
 
     // ── Setters d'injection ───────────────────────────────────────────────
     public void setTaskManager(TaskManager taskManager) {
@@ -74,7 +74,7 @@ public class TaskDetailController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Initialisation manuelle (après injection)
+    // Initialisation
     // ══════════════════════════════════════════════════════════════════════
 
     public void initialize() {
@@ -86,15 +86,11 @@ public class TaskDetailController {
         configureButtonsForRole();
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Remplissage des informations de la tâche
-    // ══════════════════════════════════════════════════════════════════════
-
     private void fillTaskInfo() {
         taskTitleLabel.setText(task.getTitle());
         descArea.setText(task.getDescription());
 
-        // Statut avec couleur
+        // Statut
         String status = task.getTaskStatus().name().replace("_", " ");
         statusLabel.setText(status);
         statusLabel.setStyle(switch (task.getTaskStatus().name()) {
@@ -105,7 +101,7 @@ public class TaskDetailController {
             default            -> "";
         });
 
-        // Priorité avec couleur
+        // Priorité
         priorityLabel.setText(task.getPriorityLevel().name());
         priorityLabel.setStyle(switch (task.getPriorityLevel().name()) {
             case "CRITICAL" -> "-fx-text-fill: #A32D2D; -fx-font-weight: bold;";
@@ -115,21 +111,13 @@ public class TaskDetailController {
         });
 
         categoryLabel.setText(task.getTaskCategory().name());
-
-        assigneeLabel.setText(
-            task.getAssignedEngineer() != null
-                ? task.getAssignedEngineer().getName()
-                : "Non assigné"
-        );
-
-        deadlineLabel.setText(
-            task.getDeadline() != null
-                ? task.getDeadline().toString()
-                : "Aucune échéance"
-        );
+        
+        // Prise en charge du polymorphisme User pour l'affichage de l'assignation
+        User assignedUser = task.getAssignedUser();
+        assigneeLabel.setText(assignedUser != null ? assignedUser.getName() + " (" + assignedUser.getRole() + ")" : "Non assigné");
+        
+        deadlineLabel.setText(task.getDeadline() != null ? task.getDeadline().toString() : "Aucune échéance");
     }
-
-    // ── Dépendances ────────────────────────────────────────────────────────
 
     private void fillDependencies() {
         ObservableList<String> deps = FXCollections.observableArrayList();
@@ -145,88 +133,57 @@ public class TaskDetailController {
         }
 
         depsListView.setItems(deps);
-
-        // Colorer les lignes selon le statut de la dépendance
         depsListView.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
+                    setText(null); setStyle("");
                 } else {
                     setText(item);
-                    if (item.contains("DONE")) {
-                        setStyle("-fx-text-fill: #3B6D11;");
-                    } else if (item.contains("BLOCKED")) {
-                        setStyle("-fx-text-fill: #BA7517;");
-                    } else if (item.contains("IN PROGRESS")) {
-                        setStyle("-fx-text-fill: #185FA5;");
-                    } else {
-                        setStyle("-fx-text-fill: #888888;");
-                    }
+                    if (item.contains("DONE")) setStyle("-fx-text-fill: #3B6D11;");
+                    else if (item.contains("BLOCKED")) setStyle("-fx-text-fill: #BA7517;");
+                    else if (item.contains("IN PROGRESS")) setStyle("-fx-text-fill: #185FA5;");
+                    else setStyle("-fx-text-fill: #888888;");
                 }
             }
         });
     }
 
-    // ── Historique ─────────────────────────────────────────────────────────
-
     private void fillHistory() {
-        colTimestamp.setCellValueFactory(data ->
-            new SimpleStringProperty(
-                data.getValue().getTimestamp() != null
-                    ? data.getValue().getTimestamp().toString()
-                    : ""
-            ));
+        colTimestamp.setCellValueFactory(data -> new SimpleStringProperty(
+            data.getValue().getTimestamp() != null ? data.getValue().getTimestamp().toString() : ""));
 
-        colUser.setCellValueFactory(data ->
-            new SimpleStringProperty(
-                data.getValue().getPerformedBy() != null
-                    ? data.getValue().getPerformedBy().getName()
-                    : "Système"
-            ));
+        colUser.setCellValueFactory(data -> new SimpleStringProperty(
+            data.getValue().getPerformedBy() != null ? data.getValue().getPerformedBy().getName() : "Système"));
 
-        colAction.setCellValueFactory(data ->
-            new SimpleStringProperty(data.getValue().getAction()));
+        colAction.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getAction()));
 
-        ObservableList<TaskHistoryEntry> history =
-            FXCollections.observableArrayList(task.getHistory());
+        ObservableList<TaskHistoryEntry> history = FXCollections.observableArrayList(task.getHistory());
         historyTable.setItems(history);
         historyTable.setPlaceholder(new Label("Aucune action enregistrée."));
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Boutons contextuels selon le rôle et l'état de la tâche
-    // ══════════════════════════════════════════════════════════════════════
-
     private void configureButtonsForRole() {
         boolean isAdmin    = currentUser instanceof Admin;
         boolean isManager  = currentUser instanceof Manager;
-        boolean isEngineer = currentUser instanceof Engineer;
         boolean isDone     = task.getTaskStatus() == TaskStatus.DONE;
-        boolean isAssignedEngineer = isEngineer
-            && task.getAssignedEngineer() != null
-            && task.getAssignedEngineer().getId().equals(currentUser.getId());
+        
+        // Vérification de l'affectation basée sur l'identifiant de l'utilisateur (Polymorphe)
+        boolean isAssignedUser = task.getAssignedUser() != null 
+            && task.getAssignedUser().getId().equals(currentUser.getId());
 
-        // Assigner : Manager ou Admin, tâche non DONE
         assignBtn.setVisible((isAdmin || isManager) && !isDone);
         assignBtn.setManaged((isAdmin || isManager) && !isDone);
 
-        // Démarrer : ingénieur assigné, tâche TODO ou BLOCKED
-        boolean canStart = isAssignedEngineer
-            && (task.getTaskStatus() == TaskStatus.TODO
-            ||  task.getTaskStatus() == TaskStatus.BLOCKED);
+        boolean canStart = isAssignedUser && (task.getTaskStatus() == TaskStatus.TODO || task.getTaskStatus() == TaskStatus.BLOCKED);
         startBtn.setVisible(canStart);
         startBtn.setManaged(canStart);
 
-        // Terminer : ingénieur assigné, tâche IN_PROGRESS
-        boolean canComplete = isAssignedEngineer
-            && task.getTaskStatus() == TaskStatus.IN_PROGRESS;
+        boolean canComplete = isAssignedUser && task.getTaskStatus() == TaskStatus.IN_PROGRESS;
         completeBtn.setVisible(canComplete);
         completeBtn.setManaged(canComplete);
 
-        // Supprimer : Admin uniquement
         deleteBtn.setVisible(isAdmin);
         deleteBtn.setManaged(isAdmin);
     }
@@ -237,31 +194,31 @@ public class TaskDetailController {
 
     @FXML
     private void handleBack() {
-        navigateTo("DashboardView.fxml", true);
+        navigateToDashboardOverview();
     }
 
     @FXML
     private void handleAssign() {
-        // Ouvrir un dialog pour choisir un ingénieur
         ChoiceDialog<String> dialog = new ChoiceDialog<>();
         dialog.setTitle("Assigner la tâche");
-        dialog.setHeaderText("Choisir un ingénieur pour : " + task.getTitle());
-        dialog.setContentText("Ingénieur :");
+        dialog.setHeaderText("Choisir un collaborateur pour : " + task.getTitle());
+        dialog.setContentText("Collaborateur :");
 
-        // Remplir avec les ingénieurs disponibles
+        // On inclut les Engineers et les Managers dans la liste de choix possible
         taskManager.getUsers().values().stream()
-            .filter(u -> u instanceof Engineer)
-            .map(User::getName)
-            .forEach(name -> dialog.getItems().add(name));
+            .filter(u -> u instanceof Engineer || u instanceof Manager)
+            .map(u -> u.getName() + " (" + u.getRole() + ")")
+            .forEach(displayName -> dialog.getItems().add(displayName));
 
-        dialog.showAndWait().ifPresent(chosenName -> {
-            Engineer engineer = (Engineer) taskManager.getUsers().values().stream()
-                .filter(u -> u instanceof Engineer && u.getName().equals(chosenName))
+        dialog.showAndWait().ifPresent(chosenDisplay -> {
+            // Récupération de l'utilisateur sélectionné
+            User selectedUser = taskManager.getUsers().values().stream()
+                .filter(u -> (u.getName() + " (" + u.getRole() + ")").equals(chosenDisplay))
                 .findFirst().orElse(null);
 
-            if (engineer != null) {
+            if (selectedUser != null) {
                 try {
-                    taskManager.assignTask(task.getId(), engineer, currentUser);
+                    taskManager.assignTask(task.getId(), selectedUser, currentUser);
                     refresh();
                 } catch (Exception e) {
                     showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
@@ -275,9 +232,6 @@ public class TaskDetailController {
         try {
             taskManager.updateTask(task.getId(), TaskStatus.IN_PROGRESS, currentUser);
             refresh();
-        } catch (InvalidTaskStateException | TaskNotFoundException
-               | InvalidRoleException e) {
-            showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
         } catch (Exception e) {
             showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
         }
@@ -296,15 +250,14 @@ public class TaskDetailController {
     @FXML
     private void handleDelete() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-            "Supprimer la tâche \"" + task.getTitle() + "\" ?",
-            ButtonType.YES, ButtonType.NO);
+            "Supprimer la tâche \"" + task.getTitle() + "\" ?", ButtonType.YES, ButtonType.NO);
         confirm.setTitle("Confirmer la suppression");
         confirm.setHeaderText(null);
         confirm.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.YES) {
                 try {
                     taskManager.deleteTask(task.getId(), currentUser);
-                    navigateTo("DashboardView.fxml", true);
+                    navigateToDashboardOverview();
                 } catch (Exception e) {
                     showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
                 }
@@ -312,12 +265,7 @@ public class TaskDetailController {
         });
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Rafraîchissement après action
-    // ══════════════════════════════════════════════════════════════════════
-
     private void refresh() {
-        // Recharger la tâche depuis le TaskManager pour avoir l'état à jour
         try {
             this.task = taskManager.findTask(task.getId());
             fillTaskInfo();
@@ -330,30 +278,28 @@ public class TaskDetailController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Navigation
+    // Navigation Centralisée (Respect du Main Layout)
     // ══════════════════════════════════════════════════════════════════════
 
-    private void navigateTo(String fxmlFile, boolean isDashboard) {
+    private void navigateToDashboardOverview() {
         try {
-            FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("../view/" + fxmlFile));
+            BorderPane mainBorderPane = (BorderPane) taskTitleLabel.getScene().getRoot();
 
-            if (isDashboard) {
-                DashboardController dc = new DashboardController();
-                dc.setTaskManager(taskManager);
-                dc.setCurrentUser(currentUser);
-                dc.setPasswords(passwords);
-                loader.setController(dc);
-            }
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("../view/DashboardView.fxml"));
+            
+            Parent dashboardView = loader.load();
+            DashboardController dc = loader.getController();
 
-            Parent root = loader.load();
+            dc.setTaskManager(taskManager);
+            dc.setCurrentUser(currentUser);
+            dc.setPasswords(passwords);
+            dc.initialize();
 
-            Stage stage = (Stage) taskTitleLabel.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
+            mainBorderPane.setCenter(dashboardView);
 
         } catch (IOException e) {
-            showAlert(Alert.AlertType.ERROR, "Erreur de navigation", e.getMessage());
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur de navigation", "Impossible de retourner au tableau de bord.");
         }
     }
 

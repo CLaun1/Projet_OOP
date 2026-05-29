@@ -8,7 +8,6 @@ import javafx.scene.control.ToggleGroup;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import src.Engineer;
 import src.Task;
 import src.TaskManager;
 import src.User;
@@ -29,11 +28,14 @@ public class ReportController {
 
     // ── Composants FXML ───────────────────────────────────────────────────
     @FXML private ToggleGroup reportTypeGroup;
-    @FXML private TextArea    reportArea;
+    @FXML private TextArea     reportArea;
 
     // ── Dépendances injectées ──────────────────────────────────────────────
     private TaskManager taskManager;
-    private User        currentUser;
+    private User         currentUser;
+    
+    // Variable pour conserver le rapport brut sans les messages de succès/erreur d'export
+    private String rawReportContent = "";
 
     public void setTaskManager(TaskManager taskManager) {
         this.taskManager = taskManager;
@@ -52,7 +54,7 @@ public class ReportController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Génération du rapport selon le RadioButton sélectionné
+    // Génération du rapport via UserData (Robuste aux changements de texte)
     // ══════════════════════════════════════════════════════════════════════
 
     @FXML
@@ -60,17 +62,18 @@ public class ReportController {
         Toggle selected = reportTypeGroup.getSelectedToggle();
         if (selected == null) return;
 
-        String label = ((RadioButton) selected).getText();
+        // Récupération de l'identifiant technique (userData) plutôt que du texte visible
+        String reportType = (selected.getUserData() != null) ? selected.getUserData().toString() : "";
 
-        String report = switch (label) {
-            case "Par statut"         -> buildReportByStatus();
-            case "Par utilisateur"    -> buildReportByUser();
-            case "Tâches en retard"   -> buildReportOverdue();
-            case "Par priorité"       -> buildReportByPriority();
-            default                   -> "Type de rapport inconnu.";
+        rawReportContent = switch (reportType) {
+            case "STATUS"   -> buildReportByStatus();
+            case "USER"     -> buildReportByUser();
+            case "OVERDUE"  -> buildReportOverdue();
+            case "PRIORITY" -> buildReportByPriority();
+            default         -> "Type de rapport inconnu.";
         };
 
-        reportArea.setText(report);
+        reportArea.setText(rawReportContent);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -98,27 +101,23 @@ public class ReportController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Rapport 2 — Par utilisateur
+    // Rapport 2 — Par utilisateur (Adapté au polymorphisme User)
     // ══════════════════════════════════════════════════════════════════════
 
     private String buildReportByUser() {
         StringBuilder sb = new StringBuilder();
         sb.append(header("RAPPORT PAR UTILISATEUR"));
 
-        // Grouper les tâches par ingénieur assigné
         Map<String, List<Task>> byUser = taskManager.getTasks().values().stream()
-            .collect(Collectors.groupingBy(t ->
-                t.getAssignedEngineer() != null
-                    ? t.getAssignedEngineer().getName()
-                    : "Non assigné"
-            ));
+            .collect(Collectors.groupingBy(t -> {
+                User u = t.getAssignedUser();
+                return (u != null) ? u.getName() + " (" + u.getRole() + ")" : "Non assigné";
+            }));
 
-        // Trier par nom d'ingénieur
         byUser.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
             .forEach(entry -> {
-                sb.append(String.format("%n  %s (%d tâche(s))%n",
-                    entry.getKey(), entry.getValue().size()));
+                sb.append(String.format("%n  %s (%d tâche(s))%n", entry.getKey(), entry.getValue().size()));
                 entry.getValue().stream()
                     .sorted((a, b) -> a.getTitle().compareTo(b.getTitle()))
                     .forEach(t -> sb.append(taskLine(t)));
@@ -150,9 +149,7 @@ public class ReportController {
             sb.append(String.format("%n  %d tâche(s) en retard :%n", overdue.size()));
             for (Task t : overdue) {
                 sb.append(String.format("    - %-30s | Échéance : %s | Statut : %s%n",
-                    t.getTitle(),
-                    t.getDeadline(),
-                    t.getTaskStatus().name()));
+                    t.getTitle(), t.getDeadline(), t.getTaskStatus().name()));
             }
         }
 
@@ -168,15 +165,13 @@ public class ReportController {
         StringBuilder sb = new StringBuilder();
         sb.append(header("RAPPORT PAR PRIORITÉ"));
 
-        // CRITICAL en premier, puis HIGH, MEDIUM, LOW
         for (PriorityLevel priority : PriorityLevel.values()) {
             List<Task> filtered = taskManager.getTasks().values().stream()
                 .filter(t -> t.getPriorityLevel() == priority)
                 .sorted((a, b) -> a.getTitle().compareTo(b.getTitle()))
                 .collect(Collectors.toList());
 
-            sb.append(String.format("%n  %-10s : %d tâche(s)%n",
-                priority.name(), filtered.size()));
+            sb.append(String.format("%n  %-10s : %d tâche(s)%n", priority.name(), filtered.size()));
             for (Task t : filtered) {
                 sb.append(taskLine(t));
             }
@@ -187,43 +182,38 @@ public class ReportController {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Export vers fichier .txt
+    // Export Sécurisé vers fichier .txt
     // ══════════════════════════════════════════════════════════════════════
 
     @FXML
     private void exportReport() {
-        String content = reportArea.getText();
-
-        if (content.isBlank() || content.equals("Sélectionnez un type de rapport pour le générer.")) {
-            reportArea.setText("Générez d'abord un rapport avant d'exporter.");
+        if (rawReportContent.isBlank()) {
+            reportArea.setText("Générez d'abord un rapport valide avant d'exporter.");
             return;
         }
 
-        // Ouvre un FileChooser pour choisir l'emplacement de sauvegarde
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Exporter le rapport");
         fileChooser.setInitialFileName("rapport_strms.txt");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("Fichiers texte (*.txt)", "*.txt"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers texte (*.txt)", "*.txt"));
 
         Stage stage = (Stage) reportArea.getScene().getWindow();
         File file = fileChooser.showSaveDialog(stage);
 
         if (file != null) {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                writer.write(content);
-                reportArea.setText(content
-                    + "\n\n  ✔ Rapport exporté avec succès : " + file.getAbsolutePath());
+                writer.write(rawReportContent); 
+                
+                reportArea.setText(rawReportContent 
+                    + "\n\n  ✔ Rapport exporté avec succès :\n  " + file.getAbsolutePath());
             } catch (IOException e) {
-                reportArea.setText(content
-                    + "\n\n  ✘ Erreur lors de l'export : " + e.getMessage());
+                reportArea.setText(rawReportContent 
+                    + "\n\n  ✘ Erreur critique lors de l'export : " + e.getMessage());
             }
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Helpers de formatage
-    // ══════════════════════════════════════════════════════════════════════
+    // ── Helpers de formatage ───────────────────────────────────────────────
 
     private String header(String title) {
         return "  ============================================\n" +
@@ -240,13 +230,9 @@ public class ReportController {
     }
 
     private String taskLine(Task t) {
-        String assignee = t.getAssignedEngineer() != null
-            ? t.getAssignedEngineer().getName()
-            : "Non assigné";
+        User assignedUser = t.getAssignedUser();
+        String assignee = (assignedUser != null) ? assignedUser.getName() + " (" + assignedUser.getRole() + ")" : "Non assigné";
         return String.format("    - %-30s | %-10s | %-12s | %s%n",
-            t.getTitle(),
-            t.getPriorityLevel().name(),
-            t.getTaskStatus().name(),
-            assignee);
+            t.getTitle(), t.getPriorityLevel().name(), t.getTaskStatus().name(), assignee);
     }
 }

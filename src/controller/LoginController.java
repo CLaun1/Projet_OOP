@@ -39,7 +39,6 @@ public class LoginController {
 
     @FXML
     private void handleLogin() {
-
         String email    = emailField.getText().trim().toLowerCase();
         String password = passwordField.getText();
 
@@ -69,7 +68,7 @@ public class LoginController {
             return;
         }
 
-        // ── 4. Connexion réussie → Dashboard ──────────────────────────────
+        // ── 4. Connexion réussie → Redirection Dashboard ──────────────────
         navigateToDashboard(foundUser);
     }
 
@@ -82,23 +81,30 @@ public class LoginController {
             FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("../view/DashboardView.fxml"));
 
-            // Injection AVANT load() — pas de fx:controller dans le FXML
-            DashboardController dc = new DashboardController();
+            // 1. On charge d'abord le FXML. Le FXMLLoader va instancier automatiquement 
+            // le DashboardController déclaré dans l'attribut fx:controller du FXML.
+            Parent root = loader.load();
+
+            // 2. On récupère l'instance unique créée par le Loader
+            DashboardController dc = loader.getController();
+
+            // 3. Injection séquentielle des dépendances capitales
             dc.setTaskManager(taskManager);
             dc.setCurrentUser(user);
             dc.setPasswords(passwords);
-            loader.setController(dc);
 
-            // load() appelle initialize() — taskManager est déjà injecté
-            Parent root = loader.load();
+            // 4. On force l'initialisation des composants visuels dépendants des données 
+            // (Barre d'accès selon le rôle, cartes KPI, TableView des tâches critiques)
+            dc.initialize();
 
+            // 5. Remplacement de la Scene (Bascule de l'écran d'authentification au Layout principal)
             Stage stage = (Stage) emailField.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setTitle("STRMS — " + user.getName());
             stage.show();
 
         } catch (IOException e) {
-            showError("Erreur lors du chargement du tableau de bord.");
+            showError("Erreur critique lors du chargement du tableau de bord.");
             e.printStackTrace();
         }
     }

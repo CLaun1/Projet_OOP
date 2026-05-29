@@ -3,6 +3,7 @@ package src;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import src.enumeration.*;
 
@@ -20,9 +21,9 @@ public class Task implements Comparable<Task> {
     private TaskStatus taskStatus;
     private TaskCategory taskCategory;
     private Date deadline;
-    private Engineer assignedEngineer;  // null if unassigned
+    private User assignedUser;      // PolyMorphic: Can be an Engineer or a Manager (null if unassigned)
 
-    private final List<Task> dependencies    = new ArrayList<>(); // Tasks that must be DONE before this one
+    private final List<Task> dependencies = new ArrayList<>(); // Tasks that must be DONE before this one
     private final List<TaskHistoryEntry> history = new ArrayList<>();
 
     // ── Constructors ────────────────────────────────────────────────────────
@@ -55,10 +56,9 @@ public class Task implements Comparable<Task> {
 
     /**
      * Adds a prerequisite task to this task's dependency list.
-     * Circular dependency prevention is handled by TaskManager BEFORE calling this.
      */
     public void addDependency(Task dependency) {
-        if (!dependencies.contains(dependency)) {
+        if (dependency != null && !dependencies.contains(dependency)) {
             dependencies.add(dependency);
         }
     }
@@ -93,8 +93,8 @@ public class Task implements Comparable<Task> {
         this.description = newDesc;
     }
 
-    public void assignEngineer(Engineer engineer) {
-        this.assignedEngineer = engineer;
+    public void assignUser(User user) {
+        this.assignedUser = user;
     }
 
     /** Prints a formatted summary of the task to the console. */
@@ -107,7 +107,7 @@ public class Task implements Comparable<Task> {
         System.out.println("  Priority      : " + priorityLevel);
         System.out.println("  Category      : " + taskCategory);
         System.out.println("  Deadline      : " + (deadline != null ? deadline.toString() : "N/A"));
-        System.out.println("  Assigned To   : " + (assignedEngineer != null ? assignedEngineer.getName() : "Unassigned"));
+        System.out.println("  Assigned To   : " + (assignedUser != null ? assignedUser.getName() + " (" + assignedUser.getRole() + ")" : "Unassigned"));
         System.out.print  ("  Dependencies  : ");
         if (dependencies.isEmpty()) {
             System.out.println("None");
@@ -124,14 +124,15 @@ public class Task implements Comparable<Task> {
         System.out.println("╚══════════════════════════════════════╝");
     }
 
-    // ── Comparable — higher priority = smaller ordinal = first in PriorityQueue ──
+    // ── Comparable — Corrected Min-Heap Ordinal Ordering ────────────────────
 
     @Override
     public int compareTo(Task other) {
-        // CRITICAL(0) < HIGH(1) < MEDIUM(2) < LOW(3) → reverse ordinal for min-heap
+        // Ordinals: CRITICAL(0), HIGH(1), MEDIUM(2), LOW(3)
+        // If 'this' is CRITICAL(0) and 'other' is LOW(3) -> returns negative (-3) -> 'this' goes first.
         return Integer.compare(
-            other.priorityLevel.ordinal(),
-            this.priorityLevel.ordinal()
+            this.priorityLevel.ordinal(),
+            other.priorityLevel.ordinal()
         );
     }
 
@@ -144,13 +145,26 @@ public class Task implements Comparable<Task> {
     public TaskStatus getTaskStatus()           { return taskStatus; }
     public TaskCategory getTaskCategory()       { return taskCategory; }
     public Date getDeadline()                   { return deadline; }
-    public Engineer getAssignedEngineer()       { return assignedEngineer; }
+    public User getAssignedUser()               { return assignedUser; }
     public List<Task> getDependencies()         { return dependencies; }
     public List<TaskHistoryEntry> getHistory()  { return history; }
 
     public void setId(String id)                { this.id = id; }
     public void setTitle(String title)          { this.title = title; }
     public void setDeadline(Date deadline)      { this.deadline = deadline; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Task)) return false;
+        Task task = (Task) o;
+        return Objects.equals(id, task.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
     @Override
     public String toString() {
