@@ -1,30 +1,20 @@
+// Manager.java
 package src;
 
 public class Manager extends User {
-    private String department;
 
-    public Manager(String id, String name, String email, String department) {
+    private final String team;
+
+    public Manager(String id, String name, String email, String team) {
         super(id, name, email);
-        this.department = department;
+        this.team = team;
     }
 
-    @Override 
-	public boolean canCreateTask() { 
-		return true;  
-	}
-    @Override 
-	public boolean canDeleteTask() { 
-		return false; 
-	}
-    @Override 
-	public boolean canAssignTask() { 
-		return true;  
-	}
+    public String getTeam() { return team; }
 
-    public String getDepartment() { 
-		return department; 
-	}
-    public void setDepartment(String dept) { 
-		this.department = dept; 
-	}
+    @Override public boolean canCreateTask()     { return false; }
+    @Override public boolean canDeleteTask()     { return false; }
+    @Override public boolean canAssignTask()     { return true;  }
+    @Override public boolean canGenerateReport() { return true;  }
+    @Override public boolean canUpdateTask()     { return true;  }
 }

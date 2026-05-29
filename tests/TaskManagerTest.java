@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Date;
 
 import src.*;
-import src.enumeration.*;
+import src.enumeration.PriorityLevel;
+import src.enumeration.TaskCategory;
+import src.enumeration.TaskStatus;
 import src.exceptions.*;
 
 /**
@@ -18,9 +20,9 @@ import src.exceptions.*;
 public class TaskManagerTest {
 
     private TaskManager manager;
-    private Admin       alice;    // can create, delete, assign
-    private Manager     bob;      // can create, assign
-    private Engineer    charlie;  // cannot create/delete/assign
+    private Admin       alice;
+    private Manager     bob;
+    private Engineer    charlie;
 
     private Task task1, task2, task3, task4;
 
@@ -28,14 +30,16 @@ public class TaskManagerTest {
     void setUp() {
         manager = new TaskManager();
 
-        alice   = new Admin("A01", "Alice", "alice@strms.com", 1);
-        bob     = new Manager("M01", "Bob", "bob@strms.com", "DevTeam");
+        // ── Constructeurs adaptés à tes classes ───────────────────────────
+        alice   = new Admin("A01",    "Alice",   "alice@strms.com",   1);
+        bob     = new Manager("M01",  "Bob",     "bob@strms.com",     "DevTeam");
         charlie = new Engineer("E01", "Charlie", "charlie@strms.com", "Backend");
 
         manager.addUser(alice);
         manager.addUser(bob);
         manager.addUser(charlie);
 
+        // ── Tâches réutilisées dans tous les tests ────────────────────────
         task1 = new Task("T1", "Define Requirements", "Gather all requirements",
                 PriorityLevel.HIGH, TaskStatus.TODO, TaskCategory.DOCUMENTATION, null);
         task2 = new Task("T2", "Design Architecture", "System design",
@@ -46,11 +50,11 @@ public class TaskManagerTest {
                 PriorityLevel.LOW, TaskStatus.TODO, TaskCategory.BUGFIX, null);
     }
 
-    // ── Add tasks ─────────────────────────────────────────────────────────────
+    // ── Ajout de tâches ───────────────────────────────────────────────────────
 
     @Test @Order(1)
     @DisplayName("Admin can add tasks")
-    void testAdminCanAddTask() throws Exception {
+    void testAdminCanAddTask() {
         assertDoesNotThrow(() -> manager.addTask(task1, alice));
         assertNotNull(manager.getTasks().get("T1"));
     }
@@ -72,7 +76,7 @@ public class TaskManagerTest {
             () -> manager.addTask(duplicate, alice));
     }
 
-    // ── Valid dependencies ────────────────────────────────────────────────────
+    // ── Dépendances valides ───────────────────────────────────────────────────
 
     @Test @Order(4)
     @DisplayName("Valid linear dependency chain T1→T2→T3→T4")
@@ -90,7 +94,7 @@ public class TaskManagerTest {
         assertTrue(task2.getDependencies().contains(task1));
     }
 
-    // ── Circular dependency detection ─────────────────────────────────────────
+    // ── Détection de dépendances circulaires ──────────────────────────────────
 
     @Test @Order(5)
     @DisplayName("Direct circular dependency T1→T1 rejected")
@@ -107,15 +111,15 @@ public class TaskManagerTest {
         manager.addTask(task2, alice);
         manager.addTask(task3, alice);
 
-        manager.addDependency("T2", "T1", alice); // T2 depends on T1
-        manager.addDependency("T3", "T2", alice); // T3 depends on T2
+        manager.addDependency("T2", "T1", alice); // T2 dépend de T1
+        manager.addDependency("T3", "T2", alice); // T3 dépend de T2
 
-        // Attempting T1 depends on T3 would create T1→T2→T3→T1
+        // T1 dépend de T3 → cycle T1→T2→T3→T1
         assertThrows(CircularDependencyException.class,
             () -> manager.addDependency("T1", "T3", alice));
     }
 
-    // ── Graph integrity after rejection ───────────────────────────────────────
+    // ── Intégrité du graphe après rejet ───────────────────────────────────────
 
     @Test @Order(7)
     @DisplayName("Graph unchanged after circular dependency rejection")
@@ -132,15 +136,15 @@ public class TaskManagerTest {
         try {
             manager.addDependency("T1", "T3", alice);
         } catch (CircularDependencyException e) {
-            // expected
+            // rejet attendu
         }
 
-        // T1 dependencies must be unchanged (still 0)
+        // T1 ne doit avoir aucune dépendance nouvelle après le rejet
         assertEquals(depsBeforeRejection, task1.getDependencies().size(),
             "Dependency list of T1 must be unchanged after rejection");
     }
 
-    // ── Remove dependency ─────────────────────────────────────────────────────
+    // ── Suppression de dépendance ─────────────────────────────────────────────
 
     @Test @Order(8)
     @DisplayName("Removing a dependency unblocks the task when all deps done")
@@ -149,20 +153,26 @@ public class TaskManagerTest {
         manager.addTask(task2, alice);
 
         manager.addDependency("T2", "T1", alice);
+
+        // T2 doit être BLOCKED car T1 n'est pas DONE
         assertEquals(TaskStatus.BLOCKED, task2.getTaskStatus(),
             "T2 should be BLOCKED because T1 is not done");
 
         manager.removeDependency("T2", "T1", alice);
+
+        // T2 doit revenir à TODO après suppression de la dépendance
         assertEquals(TaskStatus.TODO, task2.getTaskStatus(),
             "T2 should be back to TODO after dependency removal");
     }
 
-    // ── Invalid state transitions ─────────────────────────────────────────────
+    // ── Transitions d'état invalides ──────────────────────────────────────────
 
     @Test @Order(9)
     @DisplayName("Cannot transition a DONE task — InvalidTaskStateException")
     void testInvalidState() throws Exception {
         manager.addTask(task1, alice);
+
+        // assignTask utilise bob (Manager) qui a canAssignTask() = true
         manager.assignTask("T1", charlie, bob);
         manager.completeTask("T1", charlie);
 
@@ -175,14 +185,15 @@ public class TaskManagerTest {
     void testCannotStartBlockedTask() throws Exception {
         manager.addTask(task1, alice);
         manager.addTask(task2, alice);
-        manager.addDependency("T2", "T1", alice); // T2 blocked on T1
 
-        // Try to assign T2 while T1 is not done
+        manager.addDependency("T2", "T1", alice); // T2 bloquée sur T1
+
+        // Tenter d'assigner T2 alors que T1 n'est pas DONE
         assertThrows(DependencyNotCompletedException.class,
             () -> manager.assignTask("T2", charlie, bob));
     }
 
-    // ── Role permissions ──────────────────────────────────────────────────────
+    // ── Permissions par rôle ──────────────────────────────────────────────────
 
     @Test @Order(11)
     @DisplayName("Engineer cannot delete tasks — InvalidRoleException")
@@ -198,22 +209,23 @@ public class TaskManagerTest {
         manager.addTask(task1, alice);
         manager.assignTask("T1", charlie, bob);
 
-        Engineer otherEngineer = new Engineer("E02", "Dave", "dave@strms.com", "Frontend");
-        manager.addUser(otherEngineer);
+        // Un autre ingénieur ne peut pas compléter la tâche de charlie
+        Engineer dave = new Engineer("E02", "Dave", "dave@strms.com", "Frontend");
+        manager.addUser(dave);
 
         assertThrows(InvalidRoleException.class,
-            () -> manager.completeTask("T1", otherEngineer));
+            () -> manager.completeTask("T1", dave));
     }
 
-    // ── Full workflow ─────────────────────────────────────────────────────────
+    // ── Workflow complet ──────────────────────────────────────────────────────
 
     @Test @Order(13)
     @DisplayName("Full lifecycle: create → assign → complete → unblock next task")
     void testFullWorkflow() throws Exception {
         manager.addTask(task1, alice);
         manager.addTask(task2, alice);
-        manager.addDependency("T2", "T1", alice);
 
+        manager.addDependency("T2", "T1", alice);
         assertEquals(TaskStatus.BLOCKED, task2.getTaskStatus());
 
         manager.assignTask("T1", charlie, bob);
@@ -221,11 +233,13 @@ public class TaskManagerTest {
 
         manager.completeTask("T1", charlie);
         assertEquals(TaskStatus.DONE, task1.getTaskStatus());
+
+        // T2 doit être automatiquement débloquée par activateDependentTasks()
         assertEquals(TaskStatus.TODO, task2.getTaskStatus(),
             "T2 should be unblocked now that T1 is DONE");
     }
 
-    // ── Task not found ────────────────────────────────────────────────────────
+    // ── Tâche introuvable ─────────────────────────────────────────────────────
 
     @Test @Order(14)
     @DisplayName("findTask with unknown ID throws TaskNotFoundException")

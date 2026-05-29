@@ -6,7 +6,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox alignment="CENTER" spacing="20" style="-fx-padding: 60; -fx-background-color: #f4f6f8;" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/25" fx:controller="controller.LoginController">
+<VBox alignment="CENTER" spacing="20" style="-fx-padding: 60; -fx-background-color: #f4f6f8;" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/25" fx:controller="src.controller.LoginController">
 
     <Label style="-fx-font-size: 24; -fx-font-weight: bold;" text="Login" textAlignment="CENTER" />
 

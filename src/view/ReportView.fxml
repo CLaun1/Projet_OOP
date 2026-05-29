@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="controller.ReportController"
+      fx:controller="src.controller.ReportController"
       spacing="16" style="-fx-padding: 20;">
 
     <HBox spacing="12" alignment="CENTER_LEFT">

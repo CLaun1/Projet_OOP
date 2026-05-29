@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="controller.TaskFormController"
+      fx:controller="src.controller.TaskFormController"
       spacing="14" style="-fx-padding: 28; -fx-pref-width: 480;">
 
     <Label fx:id="formTitle" text="Nouvelle tâche"
