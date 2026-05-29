@@ -4,7 +4,7 @@
 <?import javafx.scene.canvas.*?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="controller.DependencyGraphController"
+      fx:controller="src.controller.DependencyGraphController"
       spacing="12" style="-fx-padding: 16;">
 
     <HBox spacing="12" alignment="CENTER_LEFT">
