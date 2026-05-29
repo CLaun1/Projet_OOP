@@ -330,19 +330,22 @@ public class DependencyGraphController {
             injectDependencies(ctrl);
 
             // Passer la tâche sélectionnée
+            // Dans DependencyGraphController.java — méthode openTaskDetail()
+
+            // Passer la tâche sélectionnée
             try {
                 ctrl.getClass()
                     .getMethod("setTask", Task.class)
                     .invoke(ctrl, selectedTask);
-            } catch (NoSuchMethodException ignored) {}
+            } catch (NoSuchMethodException | IllegalAccessException | 
+                    java.lang.reflect.InvocationTargetException ignored) {}
 
             try {
-                ctrl.getClass().getMethod("initialize").invoke(ctrl);
-            } catch (NoSuchMethodException ignored) {}
-
-            Stage stage = (Stage) graphPane.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
+                ctrl.getClass()
+                    .getMethod("initialize")
+                    .invoke(ctrl);
+            } catch (NoSuchMethodException | IllegalAccessException | 
+                    java.lang.reflect.InvocationTargetException ignored) {}
 
         } catch (IOException e) {
             nodeInfoLabel.setText("Erreur lors du chargement du détail : " + e.getMessage());

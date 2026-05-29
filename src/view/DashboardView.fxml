@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 
 <BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="src.controller.DashboardController">
+            xmlns="http://javafx.com/javafx/21">
 
     <!-- Barre latérale de navigation -->
     <left>

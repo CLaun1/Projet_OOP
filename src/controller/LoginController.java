@@ -81,13 +81,16 @@ public class LoginController {
         try {
             FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("../view/DashboardView.fxml"));
-            Parent root = loader.load();
 
-            DashboardController dc = loader.getController();
+            // Injection AVANT load() — pas de fx:controller dans le FXML
+            DashboardController dc = new DashboardController();
             dc.setTaskManager(taskManager);
             dc.setCurrentUser(user);
             dc.setPasswords(passwords);
-            dc.initialize();
+            loader.setController(dc);
+
+            // load() appelle initialize() — taskManager est déjà injecté
+            Parent root = loader.load();
 
             Stage stage = (Stage) emailField.getScene().getWindow();
             stage.setScene(new Scene(root));
