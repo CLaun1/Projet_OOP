@@ -4,7 +4,6 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
         xmlns="http://javafx.com/javafx/21"
-      fx:controller="src.controller.TaskListController"
       spacing="12" style="-fx-padding: 16;">
 
     <!-- Barre de filtres -->

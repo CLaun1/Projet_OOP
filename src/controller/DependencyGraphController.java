@@ -298,8 +298,8 @@ public class DependencyGraphController {
     private void onNodeClicked(Task task) {
         selectedTask = task;
 
-        String assignee = task.getAssignedEngineer() != null
-            ? task.getAssignedEngineer().getName()
+        String assignee = task.getAssignedUser() != null
+            ? task.getAssignedUser().getName()
             : "Non assigné";
 
         nodeInfoLabel.setText(

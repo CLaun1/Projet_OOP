@@ -4,7 +4,6 @@
 
 <VBox xmlns:fx="http://javafx.com/fxml"
         xmlns="http://javafx.com/javafx/21"
-      fx:controller="src.controller.UserManagerController"
       spacing="16" style="-fx-padding: 20;">
 
     <HBox alignment="CENTER_LEFT" spacing="12">

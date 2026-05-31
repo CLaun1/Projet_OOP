@@ -8,6 +8,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+
 import src.Admin;
 import src.Engineer;
 import src.Manager;
@@ -20,7 +21,7 @@ import java.util.UUID;
 
 public class UserManagerController {
 
-    // ── Composants injectés depuis le FXML ────────────────────────────────
+    // ── Composants FXML ───────────────────────────────────────────────────
     @FXML private TableView<User>           userTable;
     @FXML private TableColumn<User, String> colId;
     @FXML private TableColumn<User, String> colName;
@@ -34,160 +35,74 @@ public class UserManagerController {
     private User                currentUser;
     private Map<String, String> passwords;
 
-    public void setTaskManager(TaskManager taskManager) {
-        this.taskManager = taskManager;
-    }
-
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
-    }
-
-    public void setPasswords(Map<String, String> passwords) {
-        this.passwords = passwords;
-    }
+    public void setTaskManager(TaskManager taskManager) { this.taskManager = taskManager; }
+    public void setCurrentUser(User user)               { this.currentUser = user; }
+    public void setPasswords(Map<String, String> p)     { this.passwords = p; }
 
     // ══════════════════════════════════════════════════════════════════════
-    // Initialisation et Configuration des Colonnes
+    // Initialisation
     // ══════════════════════════════════════════════════════════════════════
 
     public void initialize() {
-        // 1. Liaison des données simples
-        colId.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getId()));
-        colName.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getName()));
-        colEmail.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getEmail()));
-        
-        // Extraction textuelle du rôle basée sur l'implémentation de la classe
-        colRole.setCellValueFactory(cellData -> {
-            User u = cellData.getValue();
-            return new SimpleStringProperty(u.getRole() != null ? u.getRole().toString() : "Inconnu");
+        if (taskManager == null) return;
+
+        // Colonnes simples
+        colId.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getId()));
+        colName.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getName()));
+        colEmail.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getEmail()));
+
+        // Rôle avec badge coloré
+        colRole.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getRole()));
+        colRole.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String role, boolean empty) {
+                super.updateItem(role, empty);
+                if (empty || role == null) {
+                    setText(null); setStyle("");
+                } else {
+                    setText(role);
+                    setStyle(switch (role) {
+                        case "Admin"    -> "-fx-text-fill:#3C3489;-fx-font-weight:bold;";
+                        case "Manager"  -> "-fx-text-fill:#185FA5;-fx-font-weight:bold;";
+                        default         -> "-fx-text-fill:#3B6D11;-fx-font-weight:bold;";
+                    });
+                }
+            }
         });
 
-        // 2. Calcul du nombre de tâches assignées via le polymorphisme AssignedUser
-        colTasks.setCellValueFactory(cellData -> {
-            User u = cellData.getValue();
-            long taskCount = taskManager.getTasks().values().stream()
-                .filter(t -> t.getAssignedUser() != null && t.getAssignedUser().getId().equals(u.getId()))
-                .count();
-            return new SimpleIntegerProperty((int) taskCount);
-        });
+        // Nombre de tâches assignées — utilise getUserAssignedTasksCount()
+        colTasks.setCellValueFactory(c ->
+            new SimpleIntegerProperty(
+                taskManager.getUserAssignedTasksCount(c.getValue().getId())));
 
-        // 3. Injection des boutons d'actions (Suppression)
         setupActionsColumn();
     }
 
-    /**
-     * Charge ou rafraîchit la liste des utilisateurs dans le tableau.
-     */
+    // ── Chargement des données ─────────────────────────────────────────────
     public void loadUserData() {
-        if (taskManager != null) {
-            userTable.setItems(FXCollections.observableArrayList(taskManager.getUsers().values()));
-        }
+        if (taskManager == null) return;
+        userTable.setItems(
+            FXCollections.observableArrayList(taskManager.getAllUsers()));
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Actions et Dialogues
-    // ══════════════════════════════════════════════════════════════════════
+    // ── Colonne Actions ────────────────────────────────────────────────────
 
-    @FXML
-    private void openAddUserDialog() {
-        // Restriction de sécurité IHM (Seul l'Admin crée un compte)
-        if (!(currentUser instanceof Admin)) {
-            showAlert(Alert.AlertType.ERROR, "Accès refusé", "Seuls les administrateurs peuvent ajouter des utilisateurs.");
-            return;
-        }
-
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Ajouter un utilisateur");
-        dialog.setHeaderText("Saisissez les informations du nouveau collaborateur.");
-
-        ButtonType btnEnregistrer = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnEnregistrer, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setStyle("-fx-padding: 20;");
-
-        TextField nameF = new TextField();
-        nameF.setPromptText("Nom complet");
-        TextField emailF = new TextField();
-        emailF.setPromptText("adresse@email.com");
-        PasswordField passF = new PasswordField();
-        passF.setPromptText("Mot de passe");
-        
-        // Ajout du rôle Manager dans les options de la ComboBox
-        ComboBox<String> roleCombo = new ComboBox<>(FXCollections.observableArrayList("Ingénieur", "Manager", "Administrateur"));
-        roleCombo.setValue("Ingénieur");
-        roleCombo.setMaxWidth(Double.MAX_VALUE);
-
-        grid.add(new Label("Nom :"), 0, 0);
-        grid.add(nameF, 1, 0);
-        grid.add(new Label("Email :"), 0, 1);
-        grid.add(emailF, 1, 1);
-        grid.add(new Label("Mot de passe :"), 0, 2);
-        grid.add(passF, 1, 2);
-        grid.add(new Label("Rôle :"), 0, 3);
-        grid.add(roleCombo, 1, 3);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Optional<ButtonType> result = dialog.showAndWait();
-        if (result.isPresent() && result.get() == btnEnregistrer) {
-            String name = nameF.getText().trim();
-            String email = emailF.getText().trim().toLowerCase();
-            String password = passF.getText();
-            String selectedRole = roleCombo.getValue();
-
-            if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                showAlert(Alert.AlertType.WARNING, "Champs vides", "Tous les champs sont obligatoires.");
-                return;
-            }
-
-            if (passwords.containsKey(email)) {
-                showAlert(Alert.AlertType.ERROR, "Erreur de création", "Un utilisateur avec cet email existe déjà.");
-                return;
-            }
-
-            String id = "U-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-            
-            // Remplacement du switch expression par un switch classique (rétrocompatible)
-            User newUser;
-            switch (selectedRole) {
-                case "Administrateur":
-                    newUser = new Admin(id, name, email);
-                    break;
-                case "Manager":
-                    newUser = new Manager(id, name, email);
-                    break;
-                default:
-                    newUser = new Engineer(id, name, email);
-                    break;
-            }
-
-            try {
-                taskManager.addUser(newUser, currentUser);
-                passwords.put(email, password);
-                
-                loadUserData();
-                showAlert(Alert.AlertType.INFORMATION, "Succès", "L'utilisateur " + name + " a bien été créé.");
-            } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible d'ajouter l'utilisateur : " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Génère dynamiquement le bouton de suppression pour chaque ligne du tableau.
-     */
     private void setupActionsColumn() {
-        colActions.setCellFactory(param -> new TableCell<Void, User>() {
+        colActions.setCellFactory(param -> new TableCell<User, Void>() {
             private final Button deleteBtn = new Button("Supprimer");
-
+            private final HBox   container = new HBox(deleteBtn);
             {
-                deleteBtn.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-padding: 4 8;");
-                deleteBtn.setOnAction(event -> {
-                    User targetUser = getTableView().getItems().get(getIndex());
-                    handleDeleteUser(targetUser);
+                container.setAlignment(Pos.CENTER);
+                deleteBtn.setStyle(
+                    "-fx-background-color:#A32D2D;-fx-text-fill:white;" +
+                    "-fx-font-size:11;-fx-padding:3 8;");
+                deleteBtn.setOnAction(e -> {
+                    User target = getTableView().getItems().get(getIndex());
+                    handleDeleteUser(target);
                 });
             }
 
@@ -197,49 +112,152 @@ public class UserManagerController {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    HBox container = new HBox(deleteBtn);
-                    container.setAlignment(Pos.CENTER);
+                    // Masquer le bouton si c'est l'utilisateur courant
+                    boolean isSelf = getTableView().getItems().get(getIndex())
+                        .getId().equals(currentUser.getId());
+                    deleteBtn.setDisable(isSelf);
                     setGraphic(container);
                 }
             }
         });
     }
 
-    private void handleDeleteUser(User targetUser) {
+    // ══════════════════════════════════════════════════════════════════════
+    // Bouton "+" — Ajouter un utilisateur
+    // ══════════════════════════════════════════════════════════════════════
+
+    @FXML
+    private void openAddUserDialog() {
+        // Seul l'Admin peut créer des utilisateurs
         if (!(currentUser instanceof Admin)) {
-            showAlert(Alert.AlertType.ERROR, "Action interdite", "Seuls les administrateurs possèdent les droits de suppression.");
+            showAlert(Alert.AlertType.WARNING, "Accès refusé",
+                "Seuls les Admins peuvent créer des utilisateurs.");
             return;
         }
 
-        if (targetUser.getId().equals(currentUser.getId())) {
-            showAlert(Alert.AlertType.WARNING, "Opération impossible", "Vous ne pouvez pas supprimer votre propre compte actif.");
-            return;
-        }
+        Dialog<User> dialog = new Dialog<>();
+        dialog.setTitle("Création d'un collaborateur");
+        dialog.setHeaderText("Saisissez les informations du nouveau membre :");
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirmation de suppression");
-        confirm.setHeaderText("Supprimer l'utilisateur : " + targetUser.getName() + " ?");
-        confirm.setContentText("Attention, cette action supprimera également ses assignations de tâches secondaires.");
+        ButtonType saveBtn = new ButtonType("Créer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
-        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+        // Formulaire
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setStyle("-fx-padding:20;");
+
+        TextField    nameF  = new TextField();
+        nameF.setPromptText("Nom complet");
+        TextField    emailF = new TextField();
+        emailF.setPromptText("prenom@strms.fr");
+        PasswordField passF = new PasswordField();
+        passF.setPromptText("Mot de passe");
+        ComboBox<String> roleCombo = new ComboBox<>(
+            FXCollections.observableArrayList("Engineer", "Manager", "Admin"));
+        roleCombo.setValue("Engineer");
+        roleCombo.setMaxWidth(Double.MAX_VALUE);
+
+        grid.add(new Label("Nom :"),         0, 0); grid.add(nameF,    1, 0);
+        grid.add(new Label("Email :"),       0, 1); grid.add(emailF,   1, 1);
+        grid.add(new Label("Mot de passe :"),0, 2); grid.add(passF,    1, 2);
+        grid.add(new Label("Rôle :"),        0, 3); grid.add(roleCombo,1, 3);
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Conversion résultat → objet User
+        dialog.setResultConverter(btn -> {
+            if (btn != saveBtn) return null;
+
+            String name  = nameF.getText().trim();
+            String email = emailF.getText().trim().toLowerCase();
+            String pass  = passF.getText();
+            String role  = roleCombo.getValue();
+
+            // Validation
+            if (name.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "Champs vides",
+                    "Tous les champs sont obligatoires.");
+                return null;
+            }
+            if (!email.contains("@")) {
+                showAlert(Alert.AlertType.WARNING, "Email invalide",
+                    "L'adresse email doit contenir '@'.");
+                return null;
+            }
+            if (passwords != null && passwords.containsKey(email)) {
+                showAlert(Alert.AlertType.ERROR, "Email déjà utilisé",
+                    "Un compte existe déjà avec cet email.");
+                return null;
+            }
+
+            // Enregistrement du mot de passe dans la Map
+            if (passwords != null) passwords.put(email, pass);
+
+            // Création de l'objet User selon le rôle
+            String id = "U-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
+            return switch (role) {
+                case "Admin"   -> new Admin(id, name, email);
+                case "Manager" -> new Manager(id, name, email, "DevTeam");
+                default        -> new Engineer(id, name, email, "General");
+            };
+        });
+
+        Optional<User> result = dialog.showAndWait();
+        result.ifPresent(user -> {
+            if (user == null) return;
             try {
-                taskManager.deleteUser(targetUser.getId(), currentUser);
-                passwords.remove(targetUser.getEmail().toLowerCase());
-                
-                loadUserData();
-                showAlert(Alert.AlertType.INFORMATION, "Utilisateur supprimé", "Le compte a été retiré avec succès.");
+                taskManager.addUser(user, currentUser);
+                loadUserData(); // Rafraîchir le tableau
+                showAlert(Alert.AlertType.INFORMATION, "Succès",
+                    "L'utilisateur " + user.getName() + " a été créé avec succès.");
             } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "Erreur de suppression", e.getMessage());
+                showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
+            }
+        });
+    }
+
+    // ── Suppression ────────────────────────────────────────────────────────
+
+    private void handleDeleteUser(User target) {
+        if (target.getId().equals(currentUser.getId())) {
+            showAlert(Alert.AlertType.WARNING, "Opération impossible",
+                "Vous ne pouvez pas supprimer votre propre compte actif.");
+            return;
+        }
+
+        // Vérifier si l'utilisateur a des tâches IN_PROGRESS
+        int activeTasks = taskManager.getUserAssignedTasksCount(target.getId());
+        String msg = "Supprimer " + target.getName() + " (" + target.getRole() + ") ?\n";
+        if (activeTasks > 0) {
+            msg += "\n⚠ Attention : " + activeTasks + " tâche(s) assignée(s) seront désassignées.";
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+            msg, ButtonType.YES, ButtonType.NO);
+        confirm.setTitle("Confirmer la suppression");
+        confirm.setHeaderText(null);
+
+        if (confirm.showAndWait().orElse(ButtonType.NO) == ButtonType.YES) {
+            try {
+                taskManager.deleteUser(target.getId(), currentUser);
+                if (passwords != null) passwords.remove(target.getEmail().toLowerCase());
+                loadUserData();
+                showAlert(Alert.AlertType.INFORMATION, "Supprimé",
+                    target.getName() + " a été supprimé du système.");
+            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
             }
         }
     }
 
-    // ── Utilitaire d'alertes ───────────────────────────────────────────────
+    // ── Utilitaire ─────────────────────────────────────────────────────────
+
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
+        Alert alert = new Alert(type, content, ButtonType.OK);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
         alert.showAndWait();
     }
 }

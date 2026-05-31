@@ -2,12 +2,16 @@
 
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.geometry.Pos?> <?import java.lang.String?>
+<?import javafx.geometry.Pos?>
+<?import java.lang.String?>
 
 <VBox xmlns:fx="http://javafx.com/fxml"
       xmlns="http://javafx.com/javafx/21"
-      fx:controller="src.controller.ReportController"
       spacing="16" style="-fx-padding: 20;">
+
+    <fx:define>
+        <ToggleGroup fx:id="reportTypeGroup"/>
+    </fx:define>
 
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Rapports" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
@@ -18,7 +22,6 @@
 
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Type de rapport :" style="-fx-font-weight: bold;"/>
-        <ToggleGroup fx:id="reportTypeGroup"/>
         
         <RadioButton text="Par statut" toggleGroup="$reportTypeGroup" onAction="#generateReport">
             <userData><String fx:value="STATUS"/></userData>

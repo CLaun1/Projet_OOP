@@ -14,7 +14,6 @@ import javafx.geometry.Pos;
 import javafx.stage.Stage;
 
 import src.Admin;
-import src.Engineer;
 import src.Manager;
 import src.Task;
 import src.TaskManager;
@@ -24,100 +23,69 @@ import src.enumeration.TaskStatus;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DashboardController {
 
-    // ── Conteneur Principal (Nécessaire pour la navigation fluide) ──────────
     @FXML private BorderPane mainBorderPane;
 
-    // ── Sidebar ────────────────────────────────────────────────────────────
     @FXML private Button usersBtn;
     @FXML private Label  currentUserLabel;
 
-    // ── Cartes statistiques ────────────────────────────────────────────────
     @FXML private VBox cardTodo;
     @FXML private VBox cardInProgress;
     @FXML private VBox cardBlocked;
     @FXML private VBox cardDone;
 
-    // ── Tableau tâches urgentes ────────────────────────────────────────────
-    @FXML private TableView<Task>        urgentTasksTable;
+    @FXML private TableView<Task>           urgentTasksTable;
     @FXML private TableColumn<Task, String> colTitle;
     @FXML private TableColumn<Task, String> colPriority;
     @FXML private TableColumn<Task, String> colStatus;
     @FXML private TableColumn<Task, String> colAssignee;
 
-    // ── Données injectées ──────────────────────────────────────────────────
     private TaskManager         taskManager;
     private User                currentUser;
     private Map<String, String> passwords;
 
-    public void setTaskManager(TaskManager taskManager) {
-        this.taskManager = taskManager;
-    }
+    public void setTaskManager(TaskManager tm)         { this.taskManager = tm; }
+    public void setCurrentUser(User u)                  { this.currentUser = u; }
+    public void setPasswords(Map<String, String> p)     { this.passwords = p; }
 
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
-    }
-
-    public void setPasswords(Map<String, String> passwords) {
-        this.passwords = passwords;
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // Initialisation
-    // ══════════════════════════════════════════════════════════════════════
-    
     public void initialize() {
         configureRoleAccess();
         configureTableColumns();
         refreshDashboard();
     }
 
-    // ── Contrôle d'accès selon le rôle ────────────────────────────────────
     private void configureRoleAccess() {
-        if (this.currentUser != null) {
+        if (currentUser != null) {
+            boolean canManage = currentUser instanceof Admin || currentUser instanceof Manager;
             boolean isAdmin   = currentUser instanceof Admin;
             boolean isManager = currentUser instanceof Manager;
-
-            // Masquer et libérer l'espace si l'utilisateur n'est pas Admin
-            usersBtn.setVisible(isAdmin);
-            usersBtn.setManaged(isAdmin);
-
-            String role = isAdmin   ? "Admin"
-                        : isManager ? "Manager"
-                        : "Engineer";
-            currentUserLabel.setText(currentUser.getName() + " — " + role);
+            usersBtn.setVisible(canManage);
+            usersBtn.setManaged(canManage);
+            String role = isAdmin ? "Admin" : isManager ? "Manager" : "Engineer";
+            currentUserLabel.setText(currentUser.getName() + " - " + role);
         } else {
-            System.out.println("Avertissement : Aucun utilisateur connecté.");
             currentUserLabel.setText("Mode Invité");
         }
     }
 
-    // ── Configuration du TableView ────────────────────────────────────────
     private void configureTableColumns() {
-        colTitle.setCellValueFactory(data ->
-            new SimpleStringProperty(data.getValue().getTitle()));
+        colTitle.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getTitle()));
 
-        // Colonne Priorité
-        colPriority.setCellValueFactory(data ->
-            new SimpleStringProperty(data.getValue().getPriorityLevel().name()));
-
+        colPriority.setCellValueFactory(d ->
+            new SimpleStringProperty(d.getValue().getPriorityLevel().name()));
         colPriority.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String priority, boolean empty) {
-                super.updateItem(priority, empty);
-                if (empty || priority == null) {
-                    setText(null); setStyle("");
-                } else {
-                    setText(priority);
-                    setStyle(switch (priority) {
-                        case "CRITICAL" -> "-fx-text-fill:#A32D2D; -fx-font-weight:bold;";
-                        case "HIGH"     -> "-fx-text-fill:#BA7517; -fx-font-weight:bold;";
+            @Override protected void updateItem(String p, boolean empty) {
+                super.updateItem(p, empty);
+                if (empty || p == null) { setText(null); setStyle(""); } else {
+                    setText(p);
+                    setStyle(switch (p) {
+                        case "CRITICAL" -> "-fx-text-fill:#A32D2D;-fx-font-weight:bold;";
+                        case "HIGH"     -> "-fx-text-fill:#BA7517;-fx-font-weight:bold;";
                         case "MEDIUM"   -> "-fx-text-fill:#185FA5;";
                         default         -> "-fx-text-fill:#888888;";
                     });
@@ -125,63 +93,55 @@ public class DashboardController {
             }
         });
 
-        // Colonne Statut
-        colStatus.setCellValueFactory(data ->
-            new SimpleStringProperty(data.getValue().getTaskStatus().name()));
-
+        colStatus.setCellValueFactory(d ->
+            new SimpleStringProperty(d.getValue().getTaskStatus().name()));
         colStatus.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String status, boolean empty) {
-                super.updateItem(status, empty);
-                if (empty || status == null) {
-                    setText(null); setStyle("");
-                } else {
-                    setText(status.replace("_", " "));
-                    setStyle(switch (status) {
-                        case "TODO"        -> "-fx-text-fill:#888888; -fx-font-weight:bold;";
-                        case "IN_PROGRESS" -> "-fx-text-fill:#185FA5; -fx-font-weight:bold;";
-                        case "BLOCKED"     -> "-fx-text-fill:#BA7517; -fx-font-weight:bold;";
-                        case "DONE"        -> "-fx-text-fill:#3B6D11; -fx-font-weight:bold;";
-                        default            -> "";
+            @Override protected void updateItem(String s, boolean empty) {
+                super.updateItem(s, empty);
+                if (empty || s == null) { setText(null); setStyle(""); } else {
+                    setText(s.replace("_", " "));
+                    setStyle(switch (s) {
+                        case "TODO"        -> "-fx-text-fill:#888888;-fx-font-weight:bold;";
+                        case "IN_PROGRESS" -> "-fx-text-fill:#185FA5;-fx-font-weight:bold;";
+                        case "BLOCKED"     -> "-fx-text-fill:#BA7517;-fx-font-weight:bold;";
+                        case "DONE"        -> "-fx-text-fill:#3B6D11;-fx-font-weight:bold;";
+                        default -> "";
                     });
                 }
             }
         });
 
-        // Colonne Assigné — Adaptée au polymorphisme User (Manager / Engineer)
-        colAssignee.setCellValueFactory(data -> {
-            User assignedUser = data.getValue().getAssignedUser();
-            if (assignedUser != null) {
-                String displayName = assignedUser.getName() + " (" + assignedUser.getRole() + ")";
-                return new SimpleStringProperty(displayName);
-            }
-            return new SimpleStringProperty("Non assigné");
+        colAssignee.setCellValueFactory(d -> {
+            User u = d.getValue().getAssignedUser();
+            return new SimpleStringProperty(u != null ? u.getName() + " (" + u.getRole() + ")" : "Non assigné");
         });
 
-        urgentTasksTable.setPlaceholder(
-            new Label("Aucune tâche critique ou haute priorité en attente."));
+        urgentTasksTable.setPlaceholder(new Label("Aucune tâche critique en attente."));
+
+        // Double-clic sur une tâche → détail
+        urgentTasksTable.setRowFactory(tv -> {
+            TableRow<Task> row = new TableRow<>();
+            row.setOnMouseClicked(e -> {
+                if (e.getClickCount() == 2 && !row.isEmpty()) {
+                    openTaskDetail(row.getItem());
+                }
+            });
+            return row;
+        });
     }
 
-    // ── Rafraîchissement des données ──────────────────────────────────────
     public void refreshDashboard() {
-        if (taskManager != null) {
-            refreshStatCards();
-            refreshUrgentTasksTable();
-        }
+        if (taskManager == null) return;
+        refreshStatCards();
+        refreshUrgentTasksTable();
     }
 
     private void refreshStatCards() {
-        List<Task> allTasks = new ArrayList<>(taskManager.getTasks().values());
-
-        long countTodo       = allTasks.stream().filter(t -> t.getTaskStatus() == TaskStatus.TODO).count();
-        long countInProgress = allTasks.stream().filter(t -> t.getTaskStatus() == TaskStatus.IN_PROGRESS).count();
-        long countBlocked    = allTasks.stream().filter(t -> t.getTaskStatus() == TaskStatus.BLOCKED).count();
-        long countDone       = allTasks.stream().filter(t -> t.getTaskStatus() == TaskStatus.DONE).count();
-
-        buildCard(cardTodo,       "TODO",        countTodo,       "#888888");
-        buildCard(cardInProgress, "IN PROGRESS", countInProgress, "#185FA5");
-        buildCard(cardBlocked,    "BLOCKED",     countBlocked,    "#BA7517");
-        buildCard(cardDone,       "DONE",        countDone,       "#3B6D11");
+        List<Task> all = taskManager.getAllTasks();
+        buildCard(cardTodo,       "TODO",        all.stream().filter(t->t.getTaskStatus()==TaskStatus.TODO).count(),        "#888888");
+        buildCard(cardInProgress, "IN PROGRESS", all.stream().filter(t->t.getTaskStatus()==TaskStatus.IN_PROGRESS).count(),"#185FA5");
+        buildCard(cardBlocked,    "BLOCKED",     all.stream().filter(t->t.getTaskStatus()==TaskStatus.BLOCKED).count(),     "#BA7517");
+        buildCard(cardDone,       "DONE",        all.stream().filter(t->t.getTaskStatus()==TaskStatus.DONE).count(),        "#3B6D11");
     }
 
     private void buildCard(VBox card, String label, long count, String color) {
@@ -191,58 +151,74 @@ public class DashboardController {
         card.setPrefWidth(140);
         card.setPrefHeight(80);
         card.setStyle(
-            "-fx-background-color: white;" +
-            "-fx-border-color: " + color + ";" +
-            "-fx-border-width: 2;" +
-            "-fx-border-radius: 6;" +
-            "-fx-background-radius: 6;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 2);"
-        );
-
-        Label countLabel = new Label(String.valueOf(count));
-        countLabel.setStyle("-fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
-
-        Label nameLabel = new Label(label);
-        nameLabel.setStyle("-fx-font-size: 11; -fx-text-fill: " + color + ";");
-
-        card.getChildren().addAll(countLabel, nameLabel);
+            "-fx-background-color:white;" +
+            "-fx-border-color:" + color + ";" +
+            "-fx-border-width:2;-fx-border-radius:6;-fx-background-radius:6;" +
+            "-fx-effect:dropshadow(gaussian,rgba(0,0,0,0.08),4,0,0,2);");
+        Label cntLbl = new Label(String.valueOf(count));
+        cntLbl.setStyle("-fx-font-size:28;-fx-font-weight:bold;-fx-text-fill:" + color + ";");
+        Label namLbl = new Label(label);
+        namLbl.setStyle("-fx-font-size:11;-fx-text-fill:" + color + ";");
+        card.getChildren().addAll(cntLbl, namLbl);
     }
 
     private void refreshUrgentTasksTable() {
-        List<Task> urgentTasks = new ArrayList<>(taskManager.getTasks().values())
-            .stream()
+        List<Task> urgent = taskManager.getAllTasks().stream()
             .filter(t -> t.getTaskStatus() != TaskStatus.DONE)
-            .filter(t -> t.getPriorityLevel() == PriorityLevel.CRITICAL || t.getPriorityLevel() == PriorityLevel.HIGH)
+            .filter(t -> t.getPriorityLevel() == PriorityLevel.CRITICAL
+                      || t.getPriorityLevel() == PriorityLevel.HIGH)
             .sorted((a, b) -> {
-                // Utilise la méthode compareTo de la classe Task pour respecter l'ordre naturel corrigé
-                int cmp = a.compareTo(b);
-                return cmp != 0 ? cmp : a.getTitle().compareTo(b.getTitle());
+                int c = a.compareTo(b);
+                return c != 0 ? c : a.getTitle().compareTo(b.getTitle());
             })
             .collect(Collectors.toList());
 
-        ObservableList<Task> data = FXCollections.observableArrayList(urgentTasks);
-        urgentTasksTable.setItems(data);
+        urgentTasksTable.setItems(FXCollections.observableArrayList(urgent));
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Navigation (Actions Sidebar)
-    // ══════════════════════════════════════════════════════════════════════
+    // ── Navigation ────────────────────────────────────────────────────────
 
-    @FXML
-    private void showDashboard() {
-        mainBorderPane.setCenter(urgentTasksTable.getParent()); 
-        refreshDashboard();
-    }
+    @FXML private void showDashboard() {
+        // Recharger la vue centrale d'origine
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("../view/DashboardView.fxml"));
+            Parent root = loader.load();
+            DashboardController dc = loader.getController();
+            dc.setTaskManager(taskManager);
+            dc.setCurrentUser(currentUser);
+            dc.setPasswords(passwords);
+            dc.initialize();
+            Stage stage = (Stage) usersBtn.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.setTitle("STRMS — " + currentUser.getName());
+            stage.show();
 
-    @FXML
-    private void showTasks() {
-        navigateTo("TaskListView.fxml");
+            /* FXMLLoader loader = new FXMLLoader(getClass().getResource("../view/DashboardView.fxml"));
+            DashboardController dc = new DashboardController();
+            dc.setTaskManager(taskManager);
+            dc.setCurrentUser(currentUser);
+            dc.setPasswords(passwords);
+            loader.setController(dc);
+            Parent root = loader.load();
+            mainBorderPane.setCenter(((BorderPane) root).getCenter());
+            dc.refreshDashboard(); */
+        } catch (IOException e) {
+            // Fallback : simple refresh
+            refreshDashboard();
+        }
+    } 
+    @FXML private void showTasks()         { navigateTo("TaskListView.fxml"); }
+    @FXML private void showReports()       { navigateTo("ReportView.fxml"); }
+    @FXML private void showNotifications() { 
+        showAlert(Alert.AlertType.INFORMATION, "Notifications",
+            "Aucune notification pour l'instant."); 
     }
 
     @FXML
     private void showUsers() {
         if (!(currentUser instanceof Admin)) {
-            showAlert(Alert.AlertType.WARNING, "Accès refusé", 
+            showAlert(Alert.AlertType.WARNING, "Accès refusé",
                 "Seuls les Admins peuvent accéder à la gestion des utilisateurs.");
             return;
         }
@@ -250,66 +226,103 @@ public class DashboardController {
     }
 
     @FXML
-    private void showReports() {
-        navigateTo("ReportView.fxml");
-    }
-
-    @FXML
-    private void showNotifications() {
-        navigateTo("NotificationView.fxml");
-    }
-
-    @FXML
     private void handleLogout() {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, 
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
             "Voulez-vous vraiment vous déconnecter ?", ButtonType.YES, ButtonType.NO);
         confirm.setTitle("Déconnexion");
         confirm.setHeaderText(null);
         confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.YES) {
-                navigateToLogin();
-            }
+            if (btn == ButtonType.YES) navigateToLogin();
         });
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // Moteur de Navigation Interne (Conservation de la Sidebar)
-    // ══════════════════════════════════════════════════════════════════════
-
     private void navigateTo(String fxmlFile) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("../view/" + fxmlFile));
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("../view/" + fxmlFile));
 
             Object ctrl = buildController(fxmlFile);
-            if (ctrl != null) {
-                loader.setController(ctrl);
-            }
+            if (ctrl != null) loader.setController(ctrl);
 
             Parent root = loader.load();
 
-            if (ctrl != null) {
-                injectDependencies(ctrl);
-            }
+            if (ctrl != null) injectAndInit(ctrl);
 
             mainBorderPane.setCenter(root);
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Erreur de navigation", 
+            showAlert(Alert.AlertType.ERROR, "Erreur de navigation",
                 "Impossible de charger : " + fxmlFile + "\n" + e.getMessage());
+        }
+    }
+
+    private Object buildController(String fxmlFile) {
+        return switch (fxmlFile) {
+            case "TaskListView.fxml" -> {
+                TaskListController c = new TaskListController();
+                c.setTaskManager(taskManager);
+                c.setCurrentUser(currentUser);
+                c.setPasswords(passwords);
+                yield c;
+            }
+            case "DashboardView.fxml" -> {
+                DashboardController c = new DashboardController();
+                c.setTaskManager(taskManager);
+                c.setCurrentUser(currentUser);
+                c.setPasswords(passwords);
+                yield c;
+            }
+            case "ReportView.fxml" -> {
+                ReportController c = new ReportController();
+                c.setTaskManager(taskManager);
+                c.setCurrentUser(currentUser);
+                yield c;
+            }
+            case "DependencyGraphView.fxml" -> {
+                DependencyGraphController c = new DependencyGraphController();
+                c.setTaskManager(taskManager);
+                c.setCurrentUser(currentUser);
+                c.setPasswords(passwords);
+                yield c;
+            }
+            case "UserManagerView.fxml" -> {
+                UserManagerController c = new UserManagerController();
+                c.setTaskManager(taskManager);
+                c.setCurrentUser(currentUser);
+                c.setPasswords(passwords);
+                yield c;
+            }
+            default -> null;
+        };
+    }
+
+    private void injectAndInit(Object ctrl) {
+        try {
+            ctrl.getClass().getMethod("initialize").invoke(ctrl);
+        } catch (NoSuchMethodException ignored) {
+        } catch (Exception e) {
+            System.err.println("[DashboardController] init failed: " + e.getMessage());
+        }
+        // UserManagerController needs loadUserData() after initialize()
+        try {
+            ctrl.getClass().getMethod("loadUserData").invoke(ctrl);
+        } catch (NoSuchMethodException ignored) {
+        } catch (Exception e) {
+            System.err.println("[DashboardController] loadUserData failed: " + e.getMessage());
         }
     }
 
     private void navigateToLogin() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("../view/LoginView.fxml"));
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("../view/LoginView.fxml"));
             LoginController lc = new LoginController();
             lc.setTaskManager(taskManager);
             lc.setPasswords(passwords);
             loader.setController(lc);
-
             Parent root = loader.load();
-            Stage stage = (Stage) mainBorderPane.getScene().getWindow();
+            Stage stage = (Stage) usersBtn.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.show();
         } catch (IOException e) {
@@ -317,43 +330,25 @@ public class DashboardController {
         }
     }
 
-    private Object buildController(String fxmlFile) {
-        return switch (fxmlFile) {
-            case "LoginView.fxml"           -> new LoginController();
-            case "ReportView.fxml"          -> new ReportController();
-            case "DependencyGraphView.fxml" -> new DependencyGraphController();
-            case "UserManagerView.fxml"     -> null; 
-            default                         -> null;
-        };
-    }
-
-    private void injectDependencies(Object ctrl) {
+    private void openTaskDetail(Task task) {
         try {
-            try {
-                ctrl.getClass().getMethod("setTaskManager", TaskManager.class).invoke(ctrl, taskManager);
-            } catch (NoSuchMethodException ignored) {}
-
-            try {
-                ctrl.getClass().getMethod("setCurrentUser", User.class).invoke(ctrl, currentUser);
-            } catch (NoSuchMethodException ignored) {}
-
-            try {
-                ctrl.getClass().getMethod("setPasswords", Map.class).invoke(ctrl, passwords);
-            } catch (NoSuchMethodException ignored) {}
-
-            try {
-                ctrl.getClass().getMethod("initialize").invoke(ctrl);
-            } catch (NoSuchMethodException ignored) {}
-
-        } catch (Exception e) {
-            System.err.println("[DashboardController] Échec de l'injection sur le contrôleur cible : " + e.getMessage());
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("../view/TaskDetailsView.fxml"));
+            Parent root = loader.load();
+            TaskDetailController dc = loader.getController();
+            dc.setTaskManager(taskManager);
+            dc.setCurrentUser(currentUser);
+            dc.setPasswords(passwords);
+            dc.setTask(task);
+            dc.initialize();
+            mainBorderPane.setCenter(root);
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Erreur", e.getMessage());
         }
     }
 
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type, content, ButtonType.OK);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.showAndWait();
+        Alert a = new Alert(type, content, ButtonType.OK);
+        a.setTitle(title); a.setHeaderText(null); a.showAndWait();
     }
 }

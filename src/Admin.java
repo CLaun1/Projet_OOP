@@ -4,16 +4,19 @@ public class Admin extends User {
 
     private final int accessLevel;
 
-    /** Constructeur sans accessLevel — accessLevel par défaut = 1 */
     public Admin(String id, String name, String email) {
         super(id, name, email);
         this.accessLevel = 1;
     }
 
-    /** Constructeur avec accessLevel — utilisé dans Main et les tests */
     public Admin(String id, String name, String email, int accessLevel) {
         super(id, name, email);
         this.accessLevel = accessLevel;
+    }
+
+    // Constructeur sans spécialité (équivalent Engineer/Manager) — pour UserManagerController
+    public static Admin create(String id, String name, String email) {
+        return new Admin(id, name, email, 1);
     }
 
     public int getAccessLevel() { return accessLevel; }
