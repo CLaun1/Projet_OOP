@@ -189,7 +189,7 @@ public class DashboardController {
             dc.setCurrentUser(currentUser);
             dc.setPasswords(passwords);
             dc.initialize();
-            Stage stage = (Stage) usersBtn.getScene().getWindow();
+            Stage stage = (Stage) mainBorderPane.getScene().getWindow();
             stage.setScene(new Scene(root));
             stage.setTitle("STRMS — " + currentUser.getName());
             stage.show();
@@ -206,6 +206,7 @@ public class DashboardController {
         } catch (IOException e) {
             // Fallback : simple refresh
             refreshDashboard();
+            e.printStackTrace();
         }
     } 
     @FXML private void showTasks()         { navigateTo("TaskListView.fxml"); }
@@ -317,16 +318,23 @@ public class DashboardController {
         try {
             FXMLLoader loader = new FXMLLoader(
                 getClass().getResource("../view/LoginView.fxml"));
-            LoginController lc = new LoginController();
+            
+            Parent root = loader.load();
+            LoginController lc = loader.getController();
+            //LoginController lc = new LoginController();
             lc.setTaskManager(taskManager);
             lc.setPasswords(passwords);
-            loader.setController(lc);
-            Parent root = loader.load();
-            Stage stage = (Stage) usersBtn.getScene().getWindow();
-            stage.setScene(new Scene(root));
+            //loader.setController(lc); 
+            
+            Stage stage = (Stage) mainBorderPane.getScene().getWindow();
+            stage.setTitle("STRMS");
+            stage.setScene(new Scene(root, 900, 650));
+            stage.setMinWidth(700);
+            stage.setMinHeight(500);
             stage.show();
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger l'écran de connexion.");
+            e.printStackTrace();
         }
     }
 

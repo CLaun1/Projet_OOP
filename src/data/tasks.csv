@@ -1,3 +1,3 @@
 id,title,description,priority,status,category,deadline,assignedUserId
 T-69B393,Séminaire,Préparer l'évaluation de,LOW,DONE,RESEARCH,1782770400000,U-004
-T-4D3A5F,POO report,Wrtite the last POO report,CRITICAL,TODO,DOCUMENTATION,1780696800000,
+T-4D3A5F,POO report,Wrtite the last POO report,CRITICAL,IN_PROGRESS,DOCUMENTATION,1780696800000,U-004

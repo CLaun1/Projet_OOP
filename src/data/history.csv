@@ -1,7 +1,8 @@
 taskId,timestamp,userId,action
-T-69B393,2026-05-31T18:30:34.951557700,U-001,[Restored] [Restored] [Restored] Task created with status TODO
-T-69B393,2026-05-31T18:30:34.953585200,U-001,[Restored] [Restored] [Restored] Tâche modifiée par Alice
-T-69B393,2026-05-31T18:30:34.953585200,U-001,[Restored] [Restored] [Restored] Assigned to Engineer 'Charlie' by Alice. Status → IN_PROGRESS
-T-69B393,2026-05-31T18:30:34.953585200,U-002,[Restored] [Restored] Assigned to Engineer 'Dave' by Bob. Status → IN_PROGRESS
-T-69B393,2026-05-31T18:32:16.771992400,U-004,Task marked as DONE by Dave
-T-4D3A5F,2026-05-31T18:30:34.954706700,U-001,[Restored] Task created with status TODO
+T-69B393,2026-06-03T09:09:04.571399400,U-001,[Restored] [Restored] [Restored] [Restored] Task created with status TODO
+T-69B393,2026-06-03T09:09:04.574406300,U-001,[Restored] [Restored] [Restored] [Restored] Tâche modifiée par Alice
+T-69B393,2026-06-03T09:09:04.575405300,U-001,[Restored] [Restored] [Restored] [Restored] Assigned to Engineer 'Charlie' by Alice. Status → IN_PROGRESS
+T-69B393,2026-06-03T09:09:04.575405300,U-002,[Restored] [Restored] [Restored] Assigned to Engineer 'Dave' by Bob. Status → IN_PROGRESS
+T-69B393,2026-06-03T09:09:04.575405300,U-004,[Restored] Task marked as DONE by Dave
+T-4D3A5F,2026-06-03T09:09:04.575405300,U-001,[Restored] [Restored] Task created with status TODO
+T-4D3A5F,2026-06-03T09:10:20.299057600,U-001,Assigned to Engineer 'Dave' by Alice. Status → IN_PROGRESS

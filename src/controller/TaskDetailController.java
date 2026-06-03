@@ -5,9 +5,11 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.geometry.Pos;
 import javafx.beans.property.SimpleStringProperty;
 
@@ -282,7 +284,27 @@ public class TaskDetailController {
     // ══════════════════════════════════════════════════════════════════════
 
     private void navigateToDashboardOverview() {
+        // Recharger la vue centrale d'origine
         try {
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("../view/DashboardView.fxml"));
+            Parent root = loader.load();
+            DashboardController dc = loader.getController();
+            dc.setTaskManager(taskManager);
+            dc.setCurrentUser(currentUser);
+            dc.setPasswords(passwords);
+            dc.initialize();
+            Stage stage = (Stage) deleteBtn.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.setTitle("STRMS — " + currentUser.getName());
+            stage.show();
+        } catch (IOException e) {
+            // Fallback : simple refresh
+            showAlert(Alert.AlertType.ERROR, "Erreur de navigation", "Impossible de retourner au tableau de bord.");
+            e.printStackTrace();
+        }
+
+        /* try {
             BorderPane mainBorderPane = (BorderPane) taskTitleLabel.getScene().getRoot();
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("../view/DashboardView.fxml"));
@@ -300,7 +322,7 @@ public class TaskDetailController {
         } catch (IOException e) {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Erreur de navigation", "Impossible de retourner au tableau de bord.");
-        }
+        } */
     }
 
     private void showAlert(Alert.AlertType type, String title, String content) {
