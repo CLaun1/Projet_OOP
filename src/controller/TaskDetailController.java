@@ -206,9 +206,9 @@ public class TaskDetailController {
         dialog.setHeaderText("Choisir un collaborateur pour : " + task.getTitle());
         dialog.setContentText("Collaborateur :");
 
-        // On inclut les Engineers et les Managers dans la liste de choix possible
+        // On inclut les Engineers dans la liste de choix possible
         taskManager.getUsers().values().stream()
-            .filter(u -> u instanceof Engineer || u instanceof Manager)
+            .filter(u -> u instanceof Engineer)
             .map(u -> u.getName() + " (" + u.getRole() + ")")
             .forEach(displayName -> dialog.getItems().add(displayName));
 

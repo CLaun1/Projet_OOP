@@ -100,7 +100,7 @@ public class LoginController {
             // 5. Remplacement de la Scene (Bascule de l'écran d'authentification au Layout principal)
             Stage stage = (Stage) emailField.getScene().getWindow();
             stage.setScene(new Scene(root));
-            stage.setTitle("STRMS — " + user.getName());
+            stage.setTitle("STRMS - " + user.getName());
             stage.show();
 
         } catch (IOException e) {
